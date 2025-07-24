@@ -1,25 +1,40 @@
 // src/pages/PasswordReset.jsx
 import React, { useState } from 'react';
 import DashboardLayout from '../components/DashboardLayout';
+import axios from 'axios';
 import '../styles/App.css';
 
 function PasswordReset() {
   const [email, setEmail] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [oldPassword, setOldPassword] = useState('');
 
-  const handleReset = (e) => {
+  const handleReset = async (e) => {
     e.preventDefault();
     if (newPassword !== confirmPassword) {
-      alert("Passwords do not match!");
+      alert('Passwords do not match!');
       return;
     }
-    // Simulated API logic
-    console.log("Password reset for:", email);
-    alert("Password reset successful (simulated)!");
-    setEmail('');
-    setNewPassword('');
-    setConfirmPassword('');
+    try {
+      const token = localStorage.getItem('jwtToken');
+      await axios.post('/payflowapi/user/reset-password', {
+        username: email,
+        oldPassword: oldPassword,
+        newPassword: newPassword
+      }, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+      alert('Password reset successful!');
+      setEmail('');
+      setOldPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+    } catch (error) {
+      alert('Password reset failed: ' + (error.response?.data?.error || error.message));
+    }
   };
 
   return (
@@ -37,7 +52,16 @@ function PasswordReset() {
               required
             />
           </div>
-
+          <div className="input-field">
+            <label>Old Password</label>
+            <input
+              type="password"
+              placeholder="Enter old password"
+              value={oldPassword}
+              onChange={(e) => setOldPassword(e.target.value)}
+              required
+            />
+          </div>
           <div className="input-field">
             <label>New Password</label>
             <input
@@ -48,7 +72,6 @@ function PasswordReset() {
               required
             />
           </div>
-
           <div className="input-field">
             <label>Confirm Password</label>
             <input
@@ -59,7 +82,6 @@ function PasswordReset() {
               required
             />
           </div>
-
           <button type="submit" className="button">Reset Password</button>
         </form>
       </div>

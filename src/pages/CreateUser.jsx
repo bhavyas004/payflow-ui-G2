@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import DashboardLayout from '../components/DashboardLayout';
+import axios from 'axios';
+import { useNavigate } from 'react-router-dom';
 import '../styles/App.css';
 
 function CreateUser() {
@@ -10,23 +12,34 @@ function CreateUser() {
     contactNumber: '',
     password: '',
   });
+  const navigate = useNavigate();
 
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log("User Data Submitted:", formData);
-    alert("User created successfully (simulated)!");
-    setFormData({
-      role: 'HR',
-      username: '',
-      email: '',
-      contactNumber: '',
-      password: '',
-    });
+    try {
+      const token = localStorage.getItem('jwtToken');
+      await axios.post('/payflowapi/user/admin/create', formData, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+      alert('User created successfully!');
+      setFormData({
+        role: 'HR',
+        username: '',
+        email: '',
+        contactNumber: '',
+        password: '',
+      });
+      navigate('/admin-dashboard');
+    } catch (error) {
+      alert('User creation failed: ' + (error.response?.data?.error || error.message));
+    }
   };
 
   return (
@@ -87,6 +100,7 @@ function CreateUser() {
           </div>
 
           <button type="submit" className="button">Create User</button>
+          <button type="button" className="button" style={{marginTop: '10px', backgroundColor: '#f44336'}} onClick={() => navigate('/admin-dashboard')}>Cancel</button>
         </form>
       </div>
     </DashboardLayout>

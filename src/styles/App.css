@@ -181,3 +181,84 @@ button[type="submit"]:hover {
 .forgot-password-link a:hover {
   text-decoration: underline;
 }
+
+/* Admin Dashboard Card Styles */
+.card-container {
+  display: flex;
+  gap: 2rem;
+  justify-content: center;
+  margin-top: 2rem;
+  flex-wrap: wrap;
+}
+.animated-card {
+  background: #fff;
+  border: 2px solid #2563eb;
+  border-radius: 12px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+  padding: 2rem 2.5rem;
+  min-width: 180px;
+  text-align: center;
+  transition: transform 0.3s cubic-bezier(.68,-0.55,.27,1.55), box-shadow 0.3s;
+  animation: popIn 0.7s cubic-bezier(.68,-0.55,.27,1.55);
+}
+.animated-card:hover {
+  transform: scale(1.05);
+  box-shadow: 0 8px 24px rgba(37,99,235,0.15);
+}
+.animated-card h3 {
+  margin-bottom: 1rem;
+  font-size: 1.3rem;
+  color: #333;
+}
+.count {
+  font-size: 2.5rem;
+  font-weight: bold;
+  color: #2563eb;
+  transition: color 0.3s;
+}
+.animated-card[style*="#10b981"] .count {
+  color: #10b981;
+}
+.count.loading {
+  opacity: 0.5;
+  animation: pulse 1s infinite;
+}
+@keyframes popIn {
+  0% { transform: scale(0.7); opacity: 0; }
+  80% { transform: scale(1.1); opacity: 1; }
+  100% { transform: scale(1); }
+}
+@keyframes pulse {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 1; }
+}
+
+/* Table Styles */
+.table-container {
+  margin-top: 1.5rem;
+  overflow-x: auto;
+}
+.onboard-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #fff;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+  border-radius: 8px;
+  overflow: hidden;
+}
+.onboard-table th, .onboard-table td {
+  padding: 0.75rem 1rem;
+  text-align: left;
+  border-bottom: 1px solid #eee;
+}
+.onboard-table th {
+  background: #f7f9fb;
+  font-weight: 600;
+}
+.onboard-table tr:last-child td {
+  border-bottom: none;
+}
+.onboard-table tr:hover {
+  background: #f0f4fa;
+  transition: background 0.2s;
+}

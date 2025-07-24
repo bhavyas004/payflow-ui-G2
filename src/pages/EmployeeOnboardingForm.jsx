@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import DashboardLayout from "../components/DashboardLayout";
+import axios from 'axios';
 import '../styles/App.css';
 
 const EmployeeOnboardingForm = () => {
@@ -16,11 +17,26 @@ const EmployeeOnboardingForm = () => {
     setForm({ ...form, [name]: value });
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log("Submitted Employee Data:", form);
-    alert("Employee Onboarded: " + form.fullName);
-    // You can replace console.log with an actual POST request
+    try {
+      const token = localStorage.getItem('jwtToken');
+      await axios.post('/payflowapi/employee/create', form, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+      alert("Employee Onboarded: " + form.fullName);
+      setForm({
+        fullName: "",
+        age: "",
+        totalExperience: "",
+        pastExperience: "",
+        status: "ACTIVE",
+      });
+    } catch (error) {
+      alert('Employee onboarding failed: ' + (error.response?.data?.error || error.message));
+    }
   };
 
   return (

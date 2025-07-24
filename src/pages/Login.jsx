@@ -1,6 +1,7 @@
 // src/pages/Login.jsx
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import axios from 'axios';
 import '../styles/App.css';
 
 function Login() {
@@ -9,19 +10,26 @@ function Login() {
   const [role, setRole] = useState('admin');
   const navigate = useNavigate();
 
-  const handleLogin = (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
-      const firstLogin = false;//use true or false to get reset password page or dashboard
+    try {
+      const response = await axios.post('/payflowapi/user/login', {
+        username: email,
+        password: password
+      });
+      const token = response.data.token;
+      localStorage.setItem('jwtToken', token);
       // Redirect logic
-      if (firstLogin && (role === 'hr' || role === 'manager')) {
-        navigate('/reset-password');
-      } else if (role === 'admin') {
+      if (role === 'admin') {
         navigate('/admin-dashboard');
       } else if (role === 'hr') {
         navigate('/hr-dashboard');
       } else if (role === 'manager') {
         navigate('/manager-dashboard');
       }
+    } catch (error) {
+      alert('Login failed: ' + (error.response?.data?.error || error.message));
+    }
   };
 
   return (
