@@ -4,7 +4,26 @@ import Topbar from '../components/Topbar';
 import SummaryCard from '../components/SummaryCard';
 import QuickActions from '../components/QuickActions';
 import MiniCalendar from '../components/MiniCalendar';
+import axios from 'axios';
 import '../styles/App.css';
+
+// JWT parser function
+function parseJwt(token) {
+  if (!token) return {};
+  try {
+    const base64Url = token.split('.')[1];
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+    const jsonPayload = decodeURIComponent(
+      atob(base64)
+        .split('')
+        .map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+        .join('')
+    );
+    return JSON.parse(jsonPayload);
+  } catch (e) {
+    return {};
+  }
+}
 
 // Custom Sidebar for HR Dashboard
 function HRSidebar({ active }) {
@@ -24,13 +43,10 @@ function HRSidebar({ active }) {
 
 
 export default function HRDashboard() {
-  const [user] = useState({ name: 'HR Name' });
+  const [user, setUser] = useState({ name: 'HR Name' });
   const navigate = useNavigate();
-  const [summary, setSummary] = useState({
-    totalEmployees: 0,
-    newThisMonth: 0,
-    pendingProfiles: 0,
-  });
+  const [stats, setStats] = useState({ TOTAL: 0, ACTIVE: 0, INACTIVE: 0, RECENT: 0 });
+  const [loading, setLoading] = useState(true);
   const [events] = useState([
     { date: '2025-07-10', title: 'John D. Birthday' },
     { date: '2025-07-12', title: 'Probation Review: Jane S.' },
@@ -38,27 +54,66 @@ export default function HRDashboard() {
   ]);
 
   useEffect(() => {
-    const fetchSummary = async () => {
+    // Extract user info from JWT token
+    const token = localStorage.getItem('jwtToken');
+    if (token) {
+      const payload = parseJwt(token);
+      setUser({ name: payload.sub || payload.username || 'User' });
+    }
+    
+    async function fetchStatsAndData() {
       try {
+        setLoading(true);
         const token = localStorage.getItem('jwtToken');
-        const res = await fetch('/payflowapi/employees/summary', {
-          headers: {
-            Authorization: token ? `Bearer ${token}` : ''
+        
+        // Fetch statistics from the same endpoints as Manager Dashboard
+        const [totalEmpRes, activeEmpRes, inactiveEmpRes, employeesRes] = await Promise.all([
+          axios.get('/payflowapi/stats/employees/total', {
+            headers: { Authorization: `Bearer ${token}` }
+          }),
+          axios.get('/payflowapi/stats/employees/active', {
+            headers: { Authorization: `Bearer ${token}` }
+          }),
+          axios.get('/payflowapi/stats/employees/inactive', {
+            headers: { Authorization: `Bearer ${token}` }
+          }),
+          axios.get('/payflowapi/onboard-employee/employees', {
+            headers: { Authorization: `Bearer ${token}` }
+          })
+        ]);
+        
+        // Calculate recently onboarded employees (this month)
+        const currentMonth = new Date().getMonth();
+        const currentYear = new Date().getFullYear();
+        const recentEmployees = (employeesRes.data || []).filter(emp => {
+          if (emp.createdAt) {
+            const empDate = new Date(emp.createdAt);
+            return empDate.getMonth() === currentMonth && empDate.getFullYear() === currentYear;
           }
+          return false;
         });
-        if (res.ok) {
-          const data = await res.json();
-          setSummary({
-            totalEmployees: data.totalEmployees || 0,
-            newThisMonth: data.newThisMonth || 0,
-            pendingProfiles: data.pendingProfiles || 0,
-          });
-        }
-      } catch (err) {
-        setSummary({ totalEmployees: 0, newThisMonth: 0, pendingProfiles: 0 });
+        
+        setStats({
+          TOTAL: totalEmpRes.data.totalEmployees || 0,
+          ACTIVE: activeEmpRes.data.totalActiveEmployees || 0,
+          INACTIVE: inactiveEmpRes.data.totalInactiveEmployees || 0,
+          RECENT: recentEmployees.length
+        });
+        
+        console.log('HR Dashboard - Stats fetched:', {
+          total: totalEmpRes.data.totalEmployees,
+          active: activeEmpRes.data.totalActiveEmployees,
+          inactive: inactiveEmpRes.data.totalInactiveEmployees,
+          recent: recentEmployees.length
+        });
+      } catch (error) {
+        console.error('Error fetching HR dashboard data:', error);
+        setStats({ TOTAL: 0, ACTIVE: 0, INACTIVE: 0, RECENT: 0 });
+      } finally {
+        setLoading(false);
       }
-    };
-    fetchSummary();
+    }
+    fetchStatsAndData();
   }, []);
 
   return (
@@ -76,9 +131,30 @@ export default function HRDashboard() {
         <div className="dashboard-home">
           {/* Summary Cards */}
           <div className="summary-cards-row">
-            <SummaryCard title="Total Employees" value={summary.totalEmployees} actionable onClick={() => navigate('/hr-employees')} />
-            <SummaryCard title="New This Month" value={summary.newThisMonth} actionable onClick={() => {}} />
-            <SummaryCard title="Pending Profiles" value={summary.pendingProfiles} actionable onClick={() => {}} />
+            <SummaryCard 
+              title="Total Employees" 
+              value={loading ? '...' : stats.TOTAL} 
+              actionable 
+              onClick={() => navigate('/hr-employees')} 
+            />
+            <SummaryCard 
+              title="Active Employees" 
+              value={loading ? '...' : stats.ACTIVE} 
+              actionable 
+              onClick={() => navigate('/hr-employees')} 
+            />
+            <SummaryCard 
+              title="Inactive Employees" 
+              value={loading ? '...' : stats.INACTIVE} 
+              actionable 
+              onClick={() => navigate('/hr-employees')} 
+            />
+            <SummaryCard 
+              title="Recently Onboarded" 
+              value={loading ? '...' : stats.RECENT} 
+              actionable 
+              onClick={() => navigate('/hr-employees')} 
+            />
           </div>
           <div className="dashboard-widgets-row">
             <MiniCalendar events={events} />

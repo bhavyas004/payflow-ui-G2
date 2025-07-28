@@ -6,106 +6,114 @@ import SummaryCard from '../components/SummaryCard';
 import '../styles/App.css';
 import axios from 'axios';
 
+// JWT parser function
+function parseJwt(token) {
+  if (!token) return {};
+  try {
+    const base64Url = token.split('.')[1];
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+    const jsonPayload = decodeURIComponent(
+      atob(base64)
+        .split('')
+        .map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+        .join('')
+    );
+    return JSON.parse(jsonPayload);
+  } catch (e) {
+    return {};
+  }
+}
+
 // Enhanced UserManagement component
 function UserManagement() {
-  const initialUsers = [
-    { name: 'Ravi Sharma', role: 'HR', email: 'ravi@company.com', contact: '9876543210', status: 'Active', created: '2025-07-20', lastLogin: '2025-07-25' },
-    { name: 'Meera Joshi', role: 'Manager', email: 'meera@company.com', contact: '9876543211', status: 'Disabled', created: '2025-07-18', lastLogin: '2025-07-22' },
-    { name: 'Amit Patel', role: 'HR', email: 'amit@company.com', contact: '9876543212', status: 'Active', created: '2025-07-15', lastLogin: '2025-07-21' },
-    { name: 'Priya Singh', role: 'Manager', email: 'priya@company.com', contact: '9876543213', status: 'Active', created: '2025-07-10', lastLogin: '2025-07-20' },
-  ];
-  const [users, setUsers] = useState(initialUsers);
+  const [users, setUsers] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState('');
-  const [statusFilter, setStatusFilter] = useState('');
+
+  useEffect(() => {
+    fetchUsers();
+  }, []);
+
+  const fetchUsers = async () => {
+    try {
+      setLoading(true);
+      const token = localStorage.getItem('jwtToken');
+      const response = await axios.get('/payflowapi/user/hr-managers', {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+      setUsers(response.data);
+    } catch (error) {
+      console.error('Error fetching users:', error);
+      setUsers([]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const filtered = users.filter(user =>
-    (user.name.toLowerCase().includes(search.toLowerCase()) ||
-      user.email.toLowerCase().includes(search.toLowerCase())) &&
-    (roleFilter ? user.role === roleFilter : true) &&
-    (statusFilter ? user.status === statusFilter : true)
+    (user.username?.toLowerCase().includes(search.toLowerCase()) ||
+      user.email?.toLowerCase().includes(search.toLowerCase())) &&
+    (roleFilter ? user.role === roleFilter : true)
   );
-
-  const toggleStatus = (index) => {
-    setUsers(users =>
-      users.map((u, i) =>
-        i === index ? { ...u, status: u.status === 'Active' ? 'Disabled' : 'Active' } : u
-      )
-    );
-  };
 
   return (
     <div>
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 mb-4">
-        <div className="flex gap-2">
-          <input
-            type="text"
-            placeholder="Search by name or email"
-            className="border rounded px-2 py-1"
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-          />
-          <select
-            className="border rounded px-2 py-1"
-            value={roleFilter}
-            onChange={e => setRoleFilter(e.target.value)}
-          >
-            <option value="">All Roles</option>
-            <option value="HR">HR</option>
-            <option value="Manager">Manager</option>
-          </select>
-          <select
-            className="border rounded px-2 py-1"
-            value={statusFilter}
-            onChange={e => setStatusFilter(e.target.value)}
-          >
-            <option value="">All Status</option>
-            <option value="Active">Active</option>
-            <option value="Disabled">Disabled</option>
-          </select>
-        </div>
-        <div className="text-sm text-gray-500">
+      <div style={{ marginBottom: '1rem', display: 'flex', gap: '1rem', alignItems: 'center', flexWrap: 'wrap' }}>
+        <input
+          type="text"
+          placeholder="Search by name or email"
+          style={{ padding: '0.5rem', border: '1px solid #ccc', borderRadius: '4px', minWidth: '200px' }}
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+        />
+        <select
+          style={{ padding: '0.5rem', border: '1px solid #ccc', borderRadius: '4px' }}
+          value={roleFilter}
+          onChange={e => setRoleFilter(e.target.value)}
+        >
+          <option value="">All Roles</option>
+          <option value="HR">HR</option>
+          <option value="MANAGER">Manager</option>
+        </select>
+        <div style={{ marginLeft: 'auto', fontSize: '0.9rem', color: '#666' }}>
           Showing {filtered.length} of {users.length} users
         </div>
       </div>
-      <div className="overflow-x-auto">
-        <table className="w-full border-collapse border">
+      <div className="table-container">
+        <table className="onboard-table">
           <thead>
-            <tr className="bg-gray-200">
-              <th className="border p-2">Name</th>
-              <th className="border p-2">Role</th>
-              <th className="border p-2">Email</th>
-              <th className="border p-2">Contact</th>
-              <th className="border p-2">Created</th>
-              <th className="border p-2">Last Login</th>
-              <th className="border p-2">Status</th>
-              <th className="border p-2">Actions</th>
+            <tr>
+              <th>Name</th>
+              <th>Role</th>
+              <th>Email</th>
+              <th>Contact</th>
             </tr>
           </thead>
           <tbody>
-            {filtered.map((user, index) => (
-              <tr key={index} className="text-center hover:bg-blue-50 transition">
-                <td className="border p-2">{user.name}</td>
-                <td className="border p-2">{user.role}</td>
-                <td className="border p-2">{user.email}</td>
-                <td className="border p-2">{user.contact}</td>
-                <td className="border p-2">{user.created}</td>
-                <td className="border p-2">{user.lastLogin}</td>
-                <td className="border p-2">
-                  <span className={`px-2 py-1 rounded-full text-white ${user.status === 'Active' ? 'bg-green-500' : 'bg-red-500'}`}>{user.status}</span>
-                </td>
-                <td className="border p-2 flex flex-col gap-1 md:flex-row md:gap-2 justify-center">
-                  <button onClick={() => toggleStatus(index)} className="text-xs text-blue-600 hover:underline">{user.status === 'Active' ? '🔒 Disable' : '🔓 Enable'}</button>
-                  <button className="text-xs text-yellow-600 hover:underline">✏️ Edit</button>
-                  <button className="text-xs text-red-600 hover:underline">🗑️ Delete</button>
-                  <button className="text-xs text-purple-600 hover:underline">🔑 Reset Password</button>
-                </td>
-              </tr>
-            ))}
-            {filtered.length === 0 && (
+            {loading ? (
               <tr>
-                <td colSpan={8} className="p-4 text-gray-400">No users found.</td>
+                <td colSpan={4} style={{textAlign: 'center', padding: '2rem'}}>Loading users...</td>
               </tr>
+            ) : filtered.length === 0 ? (
+              <tr>
+                <td colSpan={4} style={{textAlign: 'center', padding: '2rem'}}>No users found.</td>
+              </tr>
+            ) : (
+              filtered.map((user, index) => (
+                <tr key={user.id || index}>
+                  <td>{user.username}</td>
+                  <td>
+                    <span className={`status-badge ${user.role?.toLowerCase()}`}>
+                      {user.role}
+                    </span>
+                  </td>
+                  <td>{user.email || 'N/A'}</td>
+                  <td>{user.contactNumber || 'N/A'}</td>
+                </tr>
+              ))
             )}
           </tbody>
         </table>
@@ -129,23 +137,15 @@ function ProfileAvatar() {
   return <img src="https://ui-avatars.com/api/?name=Admin" alt="Profile" className="profile-avatar" />;
 }
 
-// User management table (placeholder data)
-const initialUsers = [
-  { name: 'Ravi Sharma', role: 'HR', email: 'ravi@company.com', status: 'Active' },
-  { name: 'Meera Joshi', role: 'Manager', email: 'meera@company.com', status: 'Disabled' },
-];
-
 export default function AdminDashboard() {
-  const [user] = useState({ name: '' });
-  const [summary] = useState({
-    totalActive: 12,
-    totalHRs: 5,
-    totalManagers: 4,
-    disabled: 2,
-    recent: 3,
+  const [user, setUser] = useState({ name: '' });
+  const [currentView, setCurrentView] = useState('dashboard'); // 'dashboard' or 'users'
+  const [summary, setSummary] = useState({
+    totalUsers: 0,
+    totalHRs: 0,
+    totalManagers: 0,
     currentDate: new Date().toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }),
   });
-  const [users, setUsers] = useState(initialUsers);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [formData, setFormData] = useState({
     role: 'HR',
@@ -160,6 +160,39 @@ export default function AdminDashboard() {
   const [formSuccess, setFormSuccess] = useState('');
 
   const navigate = useNavigate();
+
+  useEffect(() => {
+    // Extract user info from JWT token
+    const token = localStorage.getItem('jwtToken');
+    if (token) {
+      const payload = parseJwt(token);
+      setUser({ name: payload.sub || payload.username || 'User' });
+    }
+    fetchStatistics();
+  }, []);
+
+  const fetchStatistics = async () => {
+    try {
+      const token = localStorage.getItem('jwtToken');
+      const [userCountsRes, totalUsersRes] = await Promise.all([
+        axios.get('/payflowapi/user/counts', {
+          headers: { Authorization: `Bearer ${token}` }
+        }),
+        axios.get('/payflowapi/stats/users/total', {
+          headers: { Authorization: `Bearer ${token}` }
+        })
+      ]);
+      
+      setSummary(prev => ({
+        ...prev,
+        totalUsers: totalUsersRes.data.totalUsers || 0,
+        totalHRs: userCountsRes.data.HR || 0,
+        totalManagers: userCountsRes.data.MANAGER || 0,
+      }));
+    } catch (error) {
+      console.error('Error fetching statistics:', error);
+    }
+  };
 
   const handleFormChange = (e) => {
     const { name, value } = e.target;
@@ -179,6 +212,8 @@ export default function AdminDashboard() {
       });
       setFormSuccess('User created successfully!');
       setFormData({ role: 'HR', username: '', email: '', contactNumber: '', password: '' });
+      // Refresh statistics after creating user
+      fetchStatistics();
     } catch (error) {
       if (error.response?.data?.details) {
         setFormFieldErrors(error.response.data.details);
@@ -193,11 +228,6 @@ export default function AdminDashboard() {
     }
   };
 
-  // Handle enable/disable user
-  const toggleUserStatus = idx => {
-    setUsers(users => users.map((u, i) => i === idx ? { ...u, status: u.status === 'Active' ? 'Disabled' : 'Active' } : u));
-  };
-
   // Handle logout
   const handleLogout = () => {
     localStorage.removeItem('jwtToken');
@@ -210,36 +240,43 @@ export default function AdminDashboard() {
         <div className="sidebar-logo">PayFlow</div>
         <nav>
           <ul>
-            <li className="active"><a href="/admin-dashboard">🏠 Dashboard</a></li>
-            <li><a href="/employees">👥 Manage Users</a></li>
+            <li className={currentView === 'dashboard' ? 'active' : ''}><a href="#" onClick={(e) => {e.preventDefault(); setCurrentView('dashboard')}}>🏠 Dashboard</a></li>
+            <li className={currentView === 'users' ? 'active' : ''}><a href="#" onClick={(e) => {e.preventDefault(); setCurrentView('users')}}>👥 Users</a></li>
             <li><button className="logout-btn" onClick={handleLogout}>🚪 Logout</button></li>
           </ul>
         </nav>
       </aside>
       <div className="main-content admin-main-content">
-        {/* Header */}
-        <div className="admin-header-row">
-          <div className="welcome-message">👋 Welcome, Admin {user.name}!</div>
-          <div className="header-right">
-            <LiveClock />
-            <ProfileAvatar />
+        {currentView === 'dashboard' ? (
+          <>
+            {/* Header */}
+            <div className="admin-header-row">
+              <div className="welcome-message">👋 Welcome, {user.name}!</div>
+              <div className="header-right">
+                <LiveClock />
+                <ProfileAvatar />
+              </div>
+            </div>
+            {/* Info Cards */}
+            <div className="summary-cards-grid admin-cards-grid">
+              <SummaryCard title="Total Users" value={summary.totalUsers} />
+              <SummaryCard title="Total HRs" value={summary.totalHRs} />
+              <SummaryCard title="Total Managers" value={summary.totalManagers} />
+              <SummaryCard title="Current Date" value={summary.currentDate} />
+            </div>
+            {/* Create New User Button */}
+            <div className="admin-actions-row">
+              <button className="create-user-btn" onClick={() => setShowCreateModal(true)}>
+                🔐 Create New User (HR/Manager)
+              </button>
+            </div>
+          </>
+        ) : (
+          <div style={{ padding: '20px' }}>
+            <h2 style={{ marginBottom: '20px' }}>Users (HR & Managers)</h2>
+            <UserManagement />
           </div>
-        </div>
-        {/* Info Cards */}
-        <div className="summary-cards-grid admin-cards-grid">
-          <SummaryCard title="Total Active Users" value={summary.totalActive} />
-          <SummaryCard title="Total HRs" value={summary.totalHRs} />
-          <SummaryCard title="Total Managers" value={summary.totalManagers} />
-          <SummaryCard title="Disabled Users" value={summary.disabled} />
-          <SummaryCard title="Current Date" value={summary.currentDate} />
-          <SummaryCard title="Recent User Events" value={summary.recent} />
-        </div>
-        {/* Create New User Button */}
-        <div className="admin-actions-row">
-          <button className="create-user-btn" onClick={() => setShowCreateModal(true)}>
-            🔐 Create New User (HR/Manager)
-          </button>
-        </div>
+        )}
         {/* Create User Modal */}
         {showCreateModal && (
           <div className="modal-backdrop">

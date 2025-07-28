@@ -25,14 +25,15 @@ export default function Login() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const navigate = useNavigate(); // <-- Move inside component
+  const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
     setLoading(true);
+    
     try {
-      const res = await axios.post('/payflowapi/user/login', {
+      const res = await axios.post('http://localhost:8080/payflowapi/user/login', {
         username: email,
         password,
       });
@@ -40,13 +41,11 @@ export default function Login() {
       localStorage.setItem('jwtToken', token);
       const payload = parseJwt(token);
       const role = payload.role?.toLowerCase();
-      const firstLogin=payload.isFirstLogin;
+      const firstLogin = payload.isFirstLogin;
       
-      if (firstLogin==true) {
+      if (firstLogin == true) {
         navigate('/reset-password', { state: { email: res.data.email || email } });
       } else {
-        
-        
         if (role === 'admin') {
           navigate('/admin-dashboard');
         } else if (role === 'hr') {
@@ -100,9 +99,9 @@ export default function Login() {
         <button type="submit" className="login-btn" disabled={loading}>
           {loading ? 'Logging in...' : 'Login'}
         </button>
-        <div className="login-footer">
+        {/* <div className="login-footer">
           <p> <a href="/reset-password">change password</a></p>
-        </div>
+        </div> */}
       </form>
     </div>
   );

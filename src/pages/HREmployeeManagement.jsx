@@ -4,6 +4,24 @@ import '../styles/App.css';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 
+// JWT parser function
+function parseJwt(token) {
+  if (!token) return {};
+  try {
+    const base64Url = token.split('.')[1];
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+    const jsonPayload = decodeURIComponent(
+      atob(base64)
+        .split('')
+        .map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+        .join('')
+    );
+    return JSON.parse(jsonPayload);
+  } catch (e) {
+    return {};
+  }
+}
+
 function HRSidebar({ active }) {
   return (
     <aside className="sidebar">
@@ -21,13 +39,20 @@ function HRSidebar({ active }) {
 
 
 export default function HREmployeeManagement() {
-  const [user] = useState({ name: 'HR Name' });
+  const [user, setUser] = useState({ name: 'HR Name' });
   const [employees, setEmployees] = useState([]);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const navigate = useNavigate();
 
   useEffect(() => {
+    // Extract user info from JWT token
+    const token = localStorage.getItem('jwtToken');
+    if (token) {
+      const payload = parseJwt(token);
+      setUser({ name: payload.sub || payload.username || 'User' });
+    }
+    
     const fetchEmployees = async () => {
       try {
         const token = localStorage.getItem('jwtToken');
@@ -91,6 +116,7 @@ export default function HREmployeeManagement() {
                 <tr className="bg-gray-200">
                   <th className="border p-2">Name</th>
                   <th className="border p-2">Email</th>
+                  <th className="border p-2">Date Joined</th>
                   <th className="border p-2">Status</th>
                   <th className="border p-2">Actions</th>
                 </tr>
@@ -101,6 +127,9 @@ export default function HREmployeeManagement() {
                     <td className="border p-2">{emp.fullName}</td>
                     <td className="border p-2">{emp.email}</td>
                     <td className="border p-2">
+                      {emp.createdAt ? new Date(emp.createdAt).toLocaleDateString() : 'N/A'}
+                    </td>
+                    <td className="border p-2">
                       <span className={`px-2 py-1 rounded-full text-white ${emp.status === 'ACTIVE' ? 'bg-green-500' : 'bg-red-500'}`}>{emp.status}</span>
                     </td>
                     <td className="border p-2 text-center">
@@ -110,14 +139,22 @@ export default function HREmployeeManagement() {
                           try {
                             const token = localStorage.getItem('jwtToken');
                             const newStatus = emp.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE';
+                            console.log('Updating status for:', emp.fullName, 'to:', newStatus);
+                            
                             await axios.put(`/payflowapi/onboard-employee/${encodeURIComponent(emp.fullName)}/status`, { status: newStatus }, {
                               headers: {
-                                Authorization: token ? `Bearer ${token}` : ''
+                                Authorization: token ? `Bearer ${token}` : '',
+                                'Content-Type': 'application/json'
                               }
                             });
+                            
+                            // Update the local state
                             setEmployees(prev => prev.map(e => e.fullName === emp.fullName ? { ...e, status: newStatus } : e));
+                            console.log('Status updated successfully');
                           } catch (err) {
-                            alert('Failed to update status');
+                            console.error('Error updating status:', err);
+                            const errorMessage = err.response?.data?.error || err.response?.data || err.message || 'Unknown error';
+                            alert('Failed to update status: ' + errorMessage);
                           }
                         }}
                       >
@@ -128,7 +165,7 @@ export default function HREmployeeManagement() {
                 ))}
                 {filtered.length === 0 && (
                   <tr>
-                    <td colSpan={4} className="p-4 text-gray-400">No employees found.</td>
+                    <td colSpan={5} className="p-4 text-gray-400">No employees found.</td>
                   </tr>
                 )}
               </tbody>
