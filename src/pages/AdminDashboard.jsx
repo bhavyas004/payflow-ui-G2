@@ -1,4 +1,3 @@
-// src/pages/AdminDashboard.jsx
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Sidebar from '../components/Sidebar';
@@ -24,12 +23,14 @@ function parseJwt(token) {
   }
 }
 
-// Enhanced UserManagement component
+// Enhanced UserManagement component with pagination
 function UserManagement() {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const rowsPerPage = 5;
 
   useEffect(() => {
     fetchUsers();
@@ -58,6 +59,22 @@ function UserManagement() {
       user.email?.toLowerCase().includes(search.toLowerCase())) &&
     (roleFilter ? user.role === roleFilter : true)
   );
+
+  // Pagination logic
+  const totalPages = Math.ceil(filtered.length / rowsPerPage);
+  const indexOfLastRow = currentPage * rowsPerPage;
+  const indexOfFirstRow = indexOfLastRow - rowsPerPage;
+  const currentRows = filtered.slice(indexOfFirstRow, indexOfLastRow);
+
+  const handlePageChange = (page) => {
+    if (page < 1 || page > totalPages) return;
+    setCurrentPage(page);
+  };
+
+  // Reset to first page if filter/search changes and current page is out of range
+  useEffect(() => {
+    if (currentPage > totalPages) setCurrentPage(1);
+  }, [filtered.length, totalPages, currentPage]);
 
   return (
     <div>
@@ -97,12 +114,12 @@ function UserManagement() {
               <tr>
                 <td colSpan={4} style={{textAlign: 'center', padding: '2rem'}}>Loading users...</td>
               </tr>
-            ) : filtered.length === 0 ? (
+            ) : currentRows.length === 0 ? (
               <tr>
                 <td colSpan={4} style={{textAlign: 'center', padding: '2rem'}}>No users found.</td>
               </tr>
             ) : (
-              filtered.map((user, index) => (
+              currentRows.map((user, index) => (
                 <tr key={user.id || index}>
                   <td>{user.username}</td>
                   <td>
@@ -117,6 +134,39 @@ function UserManagement() {
             )}
           </tbody>
         </table>
+        {/* Pagination Controls */}
+        <div className="pagination-controls" style={{marginTop: '1rem', display: 'flex', justifyContent: 'center', gap: '0.5rem'}}>
+          <button
+            onClick={() => handlePageChange(currentPage - 1)}
+            disabled={currentPage === 1}
+            style={{padding: '0.3rem 0.8rem', borderRadius: '4px', border: '1px solid #ccc', background: currentPage === 1 ? '#eee' : '#fff'}}
+          >
+            Prev
+          </button>
+          {[...Array(totalPages)].map((_, i) => (
+            <button
+              key={i}
+              onClick={() => handlePageChange(i + 1)}
+              style={{
+                padding: '0.3rem 0.8rem',
+                borderRadius: '4px',
+                border: '1px solid #2563eb',
+                background: currentPage === i + 1 ? '#2563eb' : '#fff',
+                color: currentPage === i + 1 ? '#fff' : '#2563eb',
+                fontWeight: currentPage === i + 1 ? 700 : 400
+              }}
+            >
+              {i + 1}
+            </button>
+          ))}
+          <button
+            onClick={() => handlePageChange(currentPage + 1)}
+            disabled={currentPage === totalPages}
+            style={{padding: '0.3rem 0.8rem', borderRadius: '4px', border: '1px solid #ccc', background: currentPage === totalPages ? '#eee' : '#fff'}}
+          >
+            Next
+          </button>
+        </div>
       </div>
     </div>
   );

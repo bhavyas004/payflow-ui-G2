@@ -86,12 +86,32 @@ export default function EmployeeManagement() {
   const [formFieldErrors, setFormFieldErrors] = useState({});
   const [formSuccess, setFormSuccess] = useState('');
 
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const rowsPerPage = 5;
+
   const filtered = employees.filter(emp =>
     (emp.name.toLowerCase().includes(search.toLowerCase()) ||
       emp.email.toLowerCase().includes(search.toLowerCase())) &&
     (departmentFilter ? emp.department === departmentFilter : true) &&
     (statusFilter ? emp.status === statusFilter : true)
   );
+
+  // Pagination logic
+  const indexOfLastRow = currentPage * rowsPerPage;
+  const indexOfFirstRow = indexOfLastRow - rowsPerPage;
+  const currentRows = filtered.slice(indexOfFirstRow, indexOfLastRow);
+  const totalPages = Math.ceil(filtered.length / rowsPerPage);
+
+  const handlePageChange = (page) => {
+    if (page < 1 || page > totalPages) return;
+    setCurrentPage(page);
+  };
+
+  // Reset to first page if filter/search changes and current page is out of range
+  React.useEffect(() => {
+    if (currentPage > totalPages) setCurrentPage(1);
+  }, [filtered.length, totalPages, currentPage]);
 
   const toggleStatus = (index) => {
     setEmployees(emps =>
@@ -199,7 +219,7 @@ export default function EmployeeManagement() {
                 </tr>
               </thead>
               <tbody>
-                {filtered.map((emp, index) => (
+                {currentRows.map((emp, index) => (
                   <tr key={index} className="text-center hover:bg-blue-50 transition">
                     <td className="border p-2">{emp.name}</td>
                     <td className="border p-2">{emp.department}</td>
@@ -210,7 +230,7 @@ export default function EmployeeManagement() {
                     <td className="border p-2">{emp.dateJoined}</td>
                     <td className="border p-2">
                       <button
-                        onClick={() => toggleStatus(index)}
+                        onClick={() => toggleStatus(index + indexOfFirstRow)}
                         className="text-sm text-blue-600 hover:underline"
                       >
                         {emp.status === 'Active' ? '🔒 Deactivate' : '🔓 Activate'}
@@ -218,13 +238,46 @@ export default function EmployeeManagement() {
                     </td>
                   </tr>
                 ))}
-                {filtered.length === 0 && (
+                {currentRows.length === 0 && (
                   <tr>
                     <td colSpan={6} className="p-4 text-gray-400">No employees found.</td>
                   </tr>
                 )}
               </tbody>
             </table>
+            {/* Pagination Controls */}
+            <div className="pagination-controls" style={{marginTop: '1rem', display: 'flex', justifyContent: 'center', gap: '0.5rem'}}>
+              <button
+                onClick={() => handlePageChange(currentPage - 1)}
+                disabled={currentPage === 1}
+                style={{padding: '0.3rem 0.8rem', borderRadius: '4px', border: '1px solid #ccc', background: currentPage === 1 ? '#eee' : '#fff'}}
+              >
+                Prev
+              </button>
+              {[...Array(totalPages)].map((_, i) => (
+                <button
+                  key={i}
+                  onClick={() => handlePageChange(i + 1)}
+                  style={{
+                    padding: '0.3rem 0.8rem',
+                    borderRadius: '4px',
+                    border: '1px solid #2563eb',
+                    background: currentPage === i + 1 ? '#2563eb' : '#fff',
+                    color: currentPage === i + 1 ? '#fff' : '#2563eb',
+                    fontWeight: currentPage === i + 1 ? 700 : 400
+                  }}
+                >
+                  {i + 1}
+                </button>
+              ))}
+              <button
+                onClick={() => handlePageChange(currentPage + 1)}
+                disabled={currentPage === totalPages}
+                style={{padding: '0.3rem 0.8rem', borderRadius: '4px', border: '1px solid #ccc', background: currentPage === totalPages ? '#eee' : '#fff'}}
+              >
+                Next
+              </button>
+            </div>
           </div>
           {/* Create User Modal */}
           {showCreateModal && (
@@ -279,4 +332,4 @@ export default function EmployeeManagement() {
       </div>
     </div>
   );
-} 
+}

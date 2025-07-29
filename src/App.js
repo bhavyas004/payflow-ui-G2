@@ -12,6 +12,7 @@ import ResetPasswordForm from './pages/ResetPasswordForm'; // Import the reset p
 import PasswordReset from './pages/PasswordReset';
 import EmployeeDashboard from './pages/EmployeeDashboard'; // Assuming you have this page
 import EmployeeLoginForm from './pages/EmployeeLoginForm'; // Assuming you have this page
+import LeaveRequestForm from './pages/LeaveRequestForm'; // Assuming you have this page
 
 
 function App() {
@@ -31,6 +32,7 @@ function App() {
         {/* Optionally, add a fallback route */}
         {/* <Route path="*" element={<div>Page Not Found</div>} /> */}
         <Route path="/reset-password" element={<PasswordReset />} />
+        <Route path="employee-leave-request" element={<LeaveRequestForm />} />
       </Routes>
     </Router>
   );

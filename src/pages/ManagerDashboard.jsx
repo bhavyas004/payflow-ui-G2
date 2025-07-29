@@ -1,10 +1,10 @@
-import React, { useEffect, useState } from "react";
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import Sidebar from "../components/Sidebar";
-import Topbar from "../components/Topbar";
-import SummaryCard from "../components/SummaryCard";
-import QuickActions from "../components/QuickActions";
-import axios from "axios";
+import Topbar from '../components/Topbar';
+import SummaryCard from '../components/SummaryCard';
+import QuickActions from '../components/QuickActions';
+import MiniCalendar from '../components/MiniCalendar';
+import axios from 'axios';
 import '../styles/App.css';
 
 // JWT parser function
@@ -25,12 +25,33 @@ function parseJwt(token) {
   }
 }
 
-const ManagerDashboard = () => {
-  const [stats, setStats] = useState({ ACTIVE: 0, INACTIVE: 0, RECENT: 0 });
-  const [employees, setEmployees] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [user, setUser] = useState({ name: 'Manager' });
+// Custom Sidebar for HR Dashboard
+function HRSidebar({ active }) {
+  return (
+    <aside className="sidebar">
+      <div className="sidebar-logo">PayFlow</div>
+      <nav>
+        <ul>
+          <li className={active === 'dashboard' ? 'active' : ''}><a href="/hr-dashboard">🏠 Dashboard</a></li>
+          <li className={active === 'employees' ? 'active' : ''}><a href="/hr-employees">👥 Employees</a></li>
+          <li className={active === 'onboarding' ? 'active' : ''}><a href="/onboarding">📝 Onboarding</a></li>
+        </ul>
+      </nav>
+    </aside>
+  );
+}
+
+export default function HRDashboard() {
+  const [user, setUser] = useState({ name: 'HR Name' });
   const navigate = useNavigate();
+  const [stats, setStats] = useState({ TOTAL: 0, ACTIVE: 0, INACTIVE: 0, RECENT: 0 });
+  const [loading, setLoading] = useState(true);
+  const [employees, setEmployees] = useState([]);
+  const [events] = useState([
+    { date: '2025-07-10', title: 'John D. Birthday' },
+    { date: '2025-07-12', title: 'Probation Review: Jane S.' },
+    { date: '2025-07-15', title: 'Onboarding: New Hires' },
+  ]);
 
   useEffect(() => {
     // Extract user info from JWT token
@@ -40,13 +61,13 @@ const ManagerDashboard = () => {
       setUser({ name: payload.sub || payload.username || 'User' });
     }
     
-    async function fetchStatsAndEmployees() {
+    async function fetchStatsAndData() {
       try {
         setLoading(true);
         const token = localStorage.getItem('jwtToken');
         
-        // Fetch statistics from the correct endpoints
-        const [totalEmpRes, activeEmpRes, inactiveEmpRes, empListRes] = await Promise.all([
+        // Fetch statistics and employees
+        const [totalEmpRes, activeEmpRes, inactiveEmpRes, employeesRes] = await Promise.all([
           axios.get('/payflowapi/stats/employees/total', {
             headers: { Authorization: `Bearer ${token}` }
           }),
@@ -64,7 +85,7 @@ const ManagerDashboard = () => {
         // Calculate recently onboarded employees (this month)
         const currentMonth = new Date().getMonth();
         const currentYear = new Date().getFullYear();
-        const recentEmployees = (empListRes.data || []).filter(emp => {
+        const recentEmployees = (employeesRes.data || []).filter(emp => {
           if (emp.createdAt) {
             const empDate = new Date(emp.createdAt);
             return empDate.getMonth() === currentMonth && empDate.getFullYear() === currentYear;
@@ -78,19 +99,17 @@ const ManagerDashboard = () => {
           INACTIVE: inactiveEmpRes.data.totalInactiveEmployees || 0,
           RECENT: recentEmployees.length
         });
-        
-        setEmployees(empListRes.data || []);
-        console.log('Manager Dashboard - Employees fetched:', empListRes.data);
-        console.log('Manager Dashboard - Recent employees this month:', recentEmployees.length);
+
+        setEmployees(employeesRes.data || []);
       } catch (error) {
-        console.error('Error fetching manager dashboard data:', error);
+        console.error('Error fetching HR dashboard data:', error);
         setStats({ TOTAL: 0, ACTIVE: 0, INACTIVE: 0, RECENT: 0 });
         setEmployees([]);
       } finally {
         setLoading(false);
       }
     }
-    fetchStatsAndEmployees();
+    fetchStatsAndData();
   }, []);
 
   const handleLogout = () => {
@@ -100,90 +119,96 @@ const ManagerDashboard = () => {
 
   return (
     <div className="dashboard-layout">
-      <aside className="sidebar">
-        <div className="sidebar-logo">PayFlow</div>
-        <nav>
-          <ul>
-            <li className="active"><a href="/manager-dashboard">🏠 Dashboard</a></li>
-            <li><a href="/hr-employees">👥 Employees</a></li>
-            <li><a href="/onboarding">📝 Onboarding</a></li>
-            <li><button className="logout-btn" onClick={handleLogout}>🚪 Logout</button></li>
-          </ul>
-        </nav>
-      </aside>
+      <HRSidebar active="dashboard" />
       <div className="main-content">
-        <Topbar title="Manager Dashboard" user={user} />
-        <div className="summary-cards-row">
-          <SummaryCard 
-            title="Total Employees" 
-            value={loading ? '...' : stats.TOTAL} 
-          />
-          <SummaryCard 
-            title="Active Employees" 
-            value={loading ? '...' : stats.ACTIVE} 
-          />
-          <SummaryCard 
-            title="Inactive Employees" 
-            value={loading ? '...' : stats.INACTIVE} 
-          />
-          <SummaryCard 
-            title="Recently Onboarded" 
-            value={loading ? '...' : stats.RECENT} 
-          />
-        </div>
-        <QuickActions
-          onAddEmployee={() => {}}
-          onImportBulk={() => {}}
-          onAddHRManager={() => {}}
+        <Topbar
+          title="HR Dashboard"
+          user={user}
+          onLogout={handleLogout}
         />
-        <h3 style={{marginTop: '2rem'}}>Onboarded Employees</h3>
-        <div className="table-container">
-          <table className="onboard-table">
-            <thead>
-              <tr>
-                <th>Name</th>
-                <th>Age</th>
-                <th>Email</th>
-                <th>Total Experience</th>
-                <th>Date Joined</th>
-                <th>Status</th>
-                <th>Created By</th>
-              </tr>
-            </thead>
-            <tbody>
-              {loading ? (
+        <div className="dashboard-home">
+          {/* Summary Cards */}
+          <div className="summary-cards-row">
+            <SummaryCard 
+              title="Total Employees" 
+              value={loading ? '...' : stats.TOTAL} 
+              actionable 
+              onClick={() => navigate('/hr-employees')} 
+            />
+            <SummaryCard 
+              title="Active Employees" 
+              value={loading ? '...' : stats.ACTIVE} 
+              actionable 
+              onClick={() => navigate('/hr-employees')} 
+            />
+            <SummaryCard 
+              title="Inactive Employees" 
+              value={loading ? '...' : stats.INACTIVE} 
+              actionable 
+              onClick={() => navigate('/hr-employees')} 
+            />
+            <SummaryCard 
+              title="Recently Onboarded" 
+              value={loading ? '...' : stats.RECENT} 
+              actionable 
+              onClick={() => navigate('/hr-employees')} 
+            />
+          </div>
+          <div className="dashboard-widgets-row">
+            <MiniCalendar events={events} />
+            <QuickActions
+              onAddEmployee={() => navigate('/onboarding')}
+              onImportBulk={() => {}}
+              onAddHRManager={() => {}}
+            />
+          </div>
+          <h3 style={{marginTop: '2rem'}}>Onboarded Employees</h3>
+          <div className="table-container">
+            <table className="onboard-table">
+              <thead>
                 <tr>
-                  <td colSpan="7" style={{textAlign: 'center', padding: '2rem'}}>Loading employees...</td>
+                  <th>Name</th>
+                  <th>Age</th>
+                  <th>Email</th>
+                  <th>Total Experience</th>
+                  <th>Date Joined</th>
+                  <th>Status</th>
+                  <th>Created By</th>
                 </tr>
-              ) : employees.length === 0 ? (
-                <tr>
-                  <td colSpan="7" style={{textAlign: 'center', padding: '2rem'}}>No employees found</td>
-                </tr>
-              ) : (
-                employees.map(emp => (
-                  <tr key={emp.id}>
-                    <td>{emp.fullName}</td>
-                    <td>{emp.age}</td>
-                    <td>{emp.email}</td>
-                    <td>{emp.totalExperience || 'N/A'}</td>
-                    <td>
-                      {emp.createdAt ? new Date(emp.createdAt).toLocaleDateString() : 'N/A'}
-                    </td>
-                    <td>
-                      <span className={`status-badge ${emp.status?.toLowerCase()}`}>
-                        {emp.status}
-                      </span>
-                    </td>
-                    <td>{emp.createdBy || '-'}</td>
+              </thead>
+              <tbody>
+                {loading ? (
+                  <tr>
+                    <td colSpan="7" style={{textAlign: 'center', padding: '2rem'}}>Loading employees...</td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+                ) : employees.length === 0 ? (
+                  <tr>
+                    <td colSpan="7" style={{textAlign: 'center', padding: '2rem'}}>No employees found</td>
+                  </tr>
+                ) : (
+                  employees.map(emp => (
+                    <tr key={emp.id}>
+                      <td>{emp.fullName}</td>
+                      <td>{emp.age}</td>
+                      <td>{emp.email}</td>
+                      <td>{emp.totalExperience || 'N/A'}</td>
+                      <td>
+                        {emp.createdAt ? new Date(emp.createdAt).toLocaleDateString() : 'N/A'}
+                      </td>
+                      <td>
+                        <span className={`status-badge ${emp.status?.toLowerCase()}`}>
+                          {emp.status}
+                        </span>
+                      </td>
+                      <td>{emp.createdBy || '-'}</td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
     </div>
   );
-};
-
-export default ManagerDashboard;
+}

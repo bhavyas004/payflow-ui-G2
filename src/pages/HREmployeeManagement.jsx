@@ -37,12 +37,13 @@ function HRSidebar({ active }) {
   );
 }
 
-
 export default function HREmployeeManagement() {
   const [user, setUser] = useState({ name: 'HR Name' });
   const [employees, setEmployees] = useState([]);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [rowsPerPage] = useState(5);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -73,8 +74,23 @@ export default function HREmployeeManagement() {
     (emp.fullName?.toLowerCase().includes(search.toLowerCase()) ||
       emp.email?.toLowerCase().includes(search.toLowerCase())) 
       && (statusFilter ? emp.status === statusFilter : true)
-    // Department and date filter logic removed
   );
+
+  // Pagination logic
+  const indexOfLastRow = currentPage * rowsPerPage;
+  const indexOfFirstRow = indexOfLastRow - rowsPerPage;
+  const currentRows = filtered.slice(indexOfFirstRow, indexOfLastRow);
+  const totalPages = Math.ceil(filtered.length / rowsPerPage);
+
+  const handlePageChange = (page) => {
+    if (page < 1 || page > totalPages) return;
+    setCurrentPage(page);
+  };
+
+  useEffect(() => {
+    // Reset to first page if filter/search changes and current page is out of range
+    if (currentPage > totalPages) setCurrentPage(1);
+  }, [filtered.length, totalPages, currentPage]);
 
   return (
     <div className="dashboard-layout">
@@ -122,7 +138,7 @@ export default function HREmployeeManagement() {
                 </tr>
               </thead>
               <tbody>
-                {filtered.map((emp, index) => (
+                {currentRows.map((emp, index) => (
                   <tr key={index} className="text-center hover:bg-blue-50 transition">
                     <td className="border p-2">{emp.fullName}</td>
                     <td className="border p-2">{emp.email}</td>
@@ -139,20 +155,14 @@ export default function HREmployeeManagement() {
                           try {
                             const token = localStorage.getItem('jwtToken');
                             const newStatus = emp.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE';
-                            console.log('Updating status for:', emp.fullName, 'to:', newStatus);
-                            
                             await axios.put(`/payflowapi/onboard-employee/${encodeURIComponent(emp.fullName)}/status`, { status: newStatus }, {
                               headers: {
                                 Authorization: token ? `Bearer ${token}` : '',
                                 'Content-Type': 'application/json'
                               }
                             });
-                            
-                            // Update the local state
                             setEmployees(prev => prev.map(e => e.fullName === emp.fullName ? { ...e, status: newStatus } : e));
-                            console.log('Status updated successfully');
                           } catch (err) {
-                            console.error('Error updating status:', err);
                             const errorMessage = err.response?.data?.error || err.response?.data || err.message || 'Unknown error';
                             alert('Failed to update status: ' + errorMessage);
                           }
@@ -163,13 +173,46 @@ export default function HREmployeeManagement() {
                     </td>
                   </tr>
                 ))}
-                {filtered.length === 0 && (
+                {currentRows.length === 0 && (
                   <tr>
                     <td colSpan={5} className="p-4 text-gray-400">No employees found.</td>
                   </tr>
                 )}
               </tbody>
             </table>
+            {/* Pagination Controls */}
+            <div className="pagination-controls" style={{marginTop: '1rem', display: 'flex', justifyContent: 'center', gap: '0.5rem'}}>
+              <button
+                onClick={() => handlePageChange(currentPage - 1)}
+                disabled={currentPage === 1}
+                style={{padding: '0.3rem 0.8rem', borderRadius: '4px', border: '1px solid #ccc', background: currentPage === 1 ? '#eee' : '#fff'}}
+              >
+                Prev
+              </button>
+              {[...Array(totalPages)].map((_, i) => (
+                <button
+                  key={i}
+                  onClick={() => handlePageChange(i + 1)}
+                  style={{
+                    padding: '0.3rem 0.8rem',
+                    borderRadius: '4px',
+                    border: '1px solid #2563eb',
+                    background: currentPage === i + 1 ? '#2563eb' : '#fff',
+                    color: currentPage === i + 1 ? '#fff' : '#2563eb',
+                    fontWeight: currentPage === i + 1 ? 700 : 400
+                  }}
+                >
+                  {i + 1}
+                </button>
+              ))}
+              <button
+                onClick={() => handlePageChange(currentPage + 1)}
+                disabled={currentPage === totalPages}
+                style={{padding: '0.3rem 0.8rem', borderRadius: '4px', border: '1px solid #ccc', background: currentPage === totalPages ? '#eee' : '#fff'}}
+              >
+                Next
+              </button>
+            </div>
           </div>
         </div>
       </div>

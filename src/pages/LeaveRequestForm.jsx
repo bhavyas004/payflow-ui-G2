@@ -106,7 +106,7 @@ export default function LeaveRequestForm() {
       
       // Mock leave balance - you can replace with actual API call
       // For now using static data since leave balance endpoint doesn't exist yet
-      setLeaveBalance({ remaining: 10, used: 2, total: 12 });
+      setLeaveBalance({ remaining: 12, used: 0, total: 12 });
       
     } catch (error) {
       console.error('Error fetching employee details:', error);
@@ -171,7 +171,7 @@ export default function LeaveRequestForm() {
       };
 
       // Submit leave request (replace with actual endpoint)
-      await axios.post('/payflowapi/leave-requests/apply', leaveRequest, {
+      await axios.post('/payflowapi/onboard-employee/apply', leaveRequest, {
         headers: { Authorization: `Bearer ${token}` }
       });
 
