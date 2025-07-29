@@ -10,6 +10,9 @@ import HREmployeeManagement from './pages/HREmployeeManagement';
 import OnboardingPage from './pages/EmployeeOnboardingForm'; // Assuming you have this page
 import ResetPasswordForm from './pages/ResetPasswordForm'; // Import the reset password form
 import PasswordReset from './pages/PasswordReset';
+import EmployeeDashboard from './pages/EmployeeDashboard'; // Assuming you have this page
+import EmployeeLoginForm from './pages/EmployeeLoginForm'; // Assuming you have this page
+
 
 function App() {
   return (
@@ -23,6 +26,8 @@ function App() {
         <Route path="/employees" element={<EmployeeManagement />} />
         <Route path="/hr-employees" element={<HREmployeeManagement />} />
         <Route path="/onboarding" element={<OnboardingPage />} />
+        <Route path="/employee-dashboard" element={<EmployeeDashboard />} />
+        <Route path="/employee-login" element={<EmployeeLoginForm />} />
         {/* Optionally, add a fallback route */}
         {/* <Route path="*" element={<div>Page Not Found</div>} /> */}
         <Route path="/reset-password" element={<PasswordReset />} />
