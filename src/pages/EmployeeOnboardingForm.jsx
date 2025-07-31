@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 
@@ -7,11 +7,51 @@ const EmployeeOnboardingForm = () => {
   const [formData, setFormData] = useState({
     full_name: '',
     age: '',
+    email: '',
+    password: '',
     status: 'ACTIVE',
+    manager: '', // Add manager field
     experiences: [
       { companyName: '', startDate: '', endDate: '' }
     ],
   });
+  
+  const [managers, setManagers] = useState([]);
+  const [loadingManagers, setLoadingManagers] = useState(true);
+
+  // Fetch available managers when component mounts
+  useEffect(() => {
+    const fetchManagers = async () => {
+      try {
+        const token = localStorage.getItem('jwtToken');
+        console.log('Fetching managers with token:', token ? 'Token exists' : 'No token');
+        
+        const response = await axios.get('/payflowapi/managers/available', {
+          headers: {
+            Authorization: token ? `Bearer ${token}` : ''
+          }
+        });
+        
+        console.log('Manager API Response:', response.data);
+        
+        if (response.data.success) {
+          console.log('Managers data:', response.data.data);
+          setManagers(response.data.data || []);
+        } else {
+          console.error('Failed to fetch managers:', response.data.error);
+          setManagers([]);
+        }
+      } catch (error) {
+        console.error('Error fetching managers:', error);
+        console.error('Error response:', error.response?.data);
+        setManagers([]);
+      } finally {
+        setLoadingManagers(false);
+      }
+    };
+
+    fetchManagers();
+  }, []);
 
   // Handle main fields
   const handleChange = e => {
@@ -61,6 +101,7 @@ const EmployeeOnboardingForm = () => {
         email: formData.email,
         password: formData.password,
         status: formData.status,
+        manager: formData.manager, // Include manager in payload
         experiences: formData.experiences
       };
       await axios.post('/payflowapi/onboard-employee/add', payload, {
@@ -75,6 +116,7 @@ const EmployeeOnboardingForm = () => {
         email: '',
         password: '',
         status: 'ACTIVE',
+        manager: '', // Reset manager field
         experiences: [{ companyName: '', startDate: '', endDate: '' }]
       });
       navigate('/hr-dashboard');
@@ -138,6 +180,43 @@ const EmployeeOnboardingForm = () => {
             className="form-input"
             style={{width: '100%', padding: '0.7rem', borderRadius: '6px', border: '1px solid #d1d5db', marginTop: '0.3rem'}}
           />
+        </div>
+        {/* Manager Dropdown */}
+        <div className="form-group" style={{marginBottom: '1.2rem'}}>
+          <label htmlFor="manager" style={{fontWeight: 600}}>Assign Manager</label>
+          {loadingManagers ? (
+            <div style={{padding: '0.7rem', color: '#666', fontStyle: 'italic'}}>Loading managers...</div>
+          ) : (
+            <>
+              <select
+                id="manager"
+                name="manager"
+                value={formData.manager}
+                onChange={handleChange}
+                className="form-input"
+                style={{width: '100%', padding: '0.7rem', borderRadius: '6px', border: '1px solid #d1d5db', marginTop: '0.3rem'}}
+              >
+                <option value="">Select Manager (Optional)</option>
+                {managers.length === 0 ? (
+                  <option disabled>No managers available</option>
+                ) : (
+                  managers.map((manager) => (
+                    <option key={manager.username} value={manager.username}>
+                      {manager.fullName || manager.username} ({manager.role}) - {manager.employeeCount} employees
+                    </option>
+                  ))
+                )}
+              </select>
+              {managers.length === 0 && (
+                <div style={{color: '#f44336', fontSize: '0.9rem', marginTop: '0.3rem'}}>
+                  No managers found. Check console for errors.
+                </div>
+              )}
+            </>
+          )}
+          <small style={{color: '#666', fontSize: '0.9rem', marginTop: '0.3rem', display: 'block'}}>
+            If no manager is selected, one will be automatically assigned based on workload.
+          </small>
         </div>
         <div className="form-group" style={{marginBottom: '1.2rem'}}>
           <label htmlFor="age" style={{fontWeight: 600}}>Age</label>

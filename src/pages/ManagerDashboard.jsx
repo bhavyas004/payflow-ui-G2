@@ -25,8 +25,8 @@ function parseJwt(token) {
   }
 }
 
-// Custom Sidebar for HR Dashboard
-function HRSidebar({ active }) {
+// Custom Sidebar for Manager Dashboard
+function ManagerSidebar({ active }) {
   return (
     <aside className="sidebar">
       <div className="sidebar-logo">PayFlow</div>
@@ -41,8 +41,8 @@ function HRSidebar({ active }) {
   );
 }
 
-export default function HRDashboard() {
-  const [user, setUser] = useState({ name: 'HR Name' });
+export default function ManagerDashboard() {
+  const [user, setUser] = useState({ name: 'Manager Name' });
   const navigate = useNavigate();
   const [stats, setStats] = useState({ TOTAL: 0, ACTIVE: 0, INACTIVE: 0, RECENT: 0 });
   const [loading, setLoading] = useState(true);
@@ -102,7 +102,7 @@ export default function HRDashboard() {
 
         setEmployees(employeesRes.data || []);
       } catch (error) {
-        console.error('Error fetching HR dashboard data:', error);
+        console.error('Error fetching Manager dashboard data:', error);
         setStats({ TOTAL: 0, ACTIVE: 0, INACTIVE: 0, RECENT: 0 });
         setEmployees([]);
       } finally {
@@ -119,10 +119,10 @@ export default function HRDashboard() {
 
   return (
     <div className="dashboard-layout">
-      <HRSidebar active="dashboard" />
+      <ManagerSidebar active="dashboard" />
       <div className="main-content">
         <Topbar
-          title="HR Dashboard"
+          title="Manager Dashboard"
           user={user}
           onLogout={handleLogout}
         />

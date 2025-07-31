@@ -12,6 +12,7 @@ import ResetPasswordForm from './pages/ResetPasswordForm'; // Import the reset p
 import PasswordReset from './pages/PasswordReset';
 import EmployeeDashboard from './pages/EmployeeDashboard'; // Assuming you have this page
 import EmployeeLoginForm from './pages/EmployeeLoginForm'; // Assuming you have this page
+import EmployeeLeaveRequests from './pages/EmployeeLeaveRequests'; // Import the employee leave requests page
 import LeaveRequestForm from './pages/LeaveRequestForm'; // Assuming you have this page
 
 
@@ -29,6 +30,7 @@ function App() {
         <Route path="/onboarding" element={<OnboardingPage />} />
         <Route path="/employee-dashboard" element={<EmployeeDashboard />} />
         <Route path="/employee-login" element={<EmployeeLoginForm />} />
+        <Route path="/employee-leave-requests" element={<EmployeeLeaveRequests />} />
         {/* Optionally, add a fallback route */}
         {/* <Route path="*" element={<div>Page Not Found</div>} /> */}
         <Route path="/reset-password" element={<PasswordReset />} />

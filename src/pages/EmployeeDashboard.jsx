@@ -40,7 +40,8 @@ function EmployeeSidebar({ active }) {
       <nav>
         <ul>
           <li className={active === 'dashboard' ? 'active' : ''}><a href="/employee-dashboard">🏠 Dashboard</a></li>
-          <li className={active === 'leave-request' ? 'active' : ''}><a href="/employee-leave-request">📝 Leave Request</a></li>
+          <li className={active === 'leave-requests' ? 'active' : ''}><a href="/employee-leave-requests">📋 My Leave Requests</a></li>
+          <li className={active === 'leave-request' ? 'active' : ''}><a href="/employee-leave-request">📝 Apply Leave</a></li>
           <li className={active === 'payroll' ? 'active' : ''}><a href="/employee-payroll">💰 Payroll</a></li>
           <li><button className="logout-btn" onClick={handleLogout}>🚪 Logout</button></li>
         </ul>
@@ -53,10 +54,10 @@ export default function EmployeeDashboard() {
   const [user, setUser] = useState({ name: 'Employee' });
   const navigate = useNavigate();
   const [stats, setStats] = useState({ 
-    workDays: 0, 
-    leavesTaken: 0, 
-    pendingTasks: 0, 
-    upcomingEvents: 0 
+    totalLeaves: 12, 
+    remainingLeaves: 10, 
+    usedLeaves: 2, 
+    todaysDate: new Date().toLocaleDateString()
   });
   const [loading, setLoading] = useState(true);
   const [events] = useState([
@@ -81,21 +82,71 @@ export default function EmployeeDashboard() {
       try {
         setLoading(true);
         const token = localStorage.getItem('jwtToken');
+        const payload = parseJwt(token);
+        const employeeId = payload.employeeId;
         
-        // Mock data for employee dashboard - you can replace with actual API calls
-        // For now, using static data since employee-specific endpoints don't exist yet
-        
-        // Calculate work days this month (example calculation)
-        const today = new Date();
-        const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
-        const workDays = Math.floor((today - firstDay) / (1000 * 60 * 60 * 24)) + 1;
-        
-        setStats({
-          workDays: workDays,
-          leavesTaken: 2, // Mock data
-          pendingTasks: 5, // Mock data
-          upcomingEvents: events.length
-        });
+        if (employeeId) {
+          // Fetch comprehensive leave calculations for the employee
+          try {
+            const leaveCalcRes = await axios.get(`/payflowapi/leave-requests/calculations/employee/${employeeId}`, {
+              headers: { Authorization: `Bearer ${token}` }
+            });
+            
+            if (leaveCalcRes.data.success) {
+              const leaveData = leaveCalcRes.data.data;
+              setStats({
+                totalLeaves: leaveData.totalLeavesPerYear || 12,
+                remainingLeaves: leaveData.remainingLeaves || 0,
+                usedLeaves: leaveData.usedLeaves || 0,
+                pendingLeaves: leaveData.pendingLeaves || 0,
+                todaysDate: new Date().toLocaleDateString(),
+                // Additional stats for potential future use
+                totalRequests: leaveData.totalRequests || 0,
+                approvedRequests: leaveData.approvedRequests || 0,
+                pendingRequests: leaveData.pendingRequests || 0,
+                rejectedRequests: leaveData.rejectedRequests || 0
+              });
+            } else {
+              throw new Error('Failed to fetch leave calculations');
+            }
+          } catch (leaveError) {
+            console.log('Leave calculations not available, trying basic balance endpoint');
+            
+            // Fallback to basic leave balance endpoint
+            try {
+              const leaveBalanceRes = await axios.get(`/payflowapi/leave-requests/balance/${employeeId}`, {
+                headers: { Authorization: `Bearer ${token}` }
+              });
+              
+              const leaveBalance = leaveBalanceRes.data;
+              setStats({
+                totalLeaves: leaveBalance.total || 12,
+                remainingLeaves: leaveBalance.remaining || 0,
+                usedLeaves: leaveBalance.used || 0,
+                pendingLeaves: 0,
+                todaysDate: new Date().toLocaleDateString()
+              });
+            } catch (balanceError) {
+              console.log('Using default leave values');
+              setStats({
+                totalLeaves: 12,
+                remainingLeaves: 12,
+                usedLeaves: 0,
+                pendingLeaves: 0,
+                todaysDate: new Date().toLocaleDateString()
+              });
+            }
+          }
+        } else {
+          // Fallback if no employeeId
+          setStats({
+            totalLeaves: 12,
+            remainingLeaves: 12,
+            usedLeaves: 0,
+            pendingLeaves: 0,
+            todaysDate: new Date().toLocaleDateString()
+          });
+        }
         
         console.log('Employee Dashboard - User data:', {
           name: user.name,
@@ -104,7 +155,12 @@ export default function EmployeeDashboard() {
         });
       } catch (error) {
         console.error('Error fetching employee dashboard data:', error);
-        setStats({ workDays: 0, leavesTaken: 0, pendingTasks: 0, upcomingEvents: 0 });
+        setStats({ 
+          totalLeaves: 12, 
+          remainingLeaves: 12, 
+          usedLeaves: 0, 
+          todaysDate: new Date().toLocaleDateString() 
+        });
       } finally {
         setLoading(false);
       }
@@ -129,6 +185,13 @@ export default function EmployeeDashboard() {
           <div className="admin-header-row">
             <div className="welcome-message">👋 Welcome, {user.name}!</div>
             <div className="header-right">
+              <button 
+                className="view-leaves-btn" 
+                onClick={() => navigate('/employee-leave-requests')}
+                title="View My Leave Requests"
+              >
+                📋 My Leave Requests
+              </button>
               <div className="employee-status">
                 Status: <span className={`status-badge ${user.status?.toLowerCase()}`}>
                   {user.status || 'ACTIVE'}
@@ -140,28 +203,26 @@ export default function EmployeeDashboard() {
           {/* Summary Cards */}
           <div className="summary-cards-row">
             <SummaryCard 
-              title="Work Days This Month" 
-              value={loading ? '...' : stats.workDays} 
+              title="Total Leaves" 
+              value={loading ? '...' : stats.totalLeaves} 
               actionable 
-              onClick={() => navigate('/employee-attendance')} 
+              onClick={() => navigate('/employee-leave-requests')} 
             />
             <SummaryCard 
-              title="Leaves Taken" 
-              value={loading ? '...' : stats.leavesTaken} 
+              title="Used Leaves" 
+              value={loading ? '...' : stats.usedLeaves} 
               actionable 
-              onClick={() => navigate('/employee-attendance')} 
+              onClick={() => navigate('/employee-leave-requests')} 
             />
             <SummaryCard 
-              title="Pending Tasks" 
-              value={loading ? '...' : stats.pendingTasks} 
+              title="Remaining Leaves" 
+              value={loading ? '...' : stats.remainingLeaves} 
               actionable 
-              onClick={() => navigate('/employee-tasks')} 
+              onClick={() => navigate('/employee-leave-requests')} 
             />
             <SummaryCard 
-              title="Upcoming Events" 
-              value={loading ? '...' : stats.upcomingEvents} 
-              actionable 
-              onClick={() => {}} 
+              title="Today's Date" 
+              value={stats.todaysDate} 
             />
           </div>
           

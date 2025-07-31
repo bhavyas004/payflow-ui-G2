@@ -36,7 +36,8 @@ function EmployeeSidebar({ active }) {
       <nav>
         <ul>
           <li className={active === 'dashboard' ? 'active' : ''}><a href="/employee-dashboard">🏠 Dashboard</a></li>
-          <li className={active === 'leave-request' ? 'active' : ''}><a href="/employee-leave-request">📝 Leave Request</a></li>
+          <li className={active === 'leave-requests' ? 'active' : ''}><a href="/employee-leave-requests">📋 My Leave Requests</a></li>
+          <li className={active === 'leave-request' ? 'active' : ''}><a href="/employee-leave-request">📝 Apply Leave</a></li>
           <li className={active === 'payroll' ? 'active' : ''}><a href="/employee-payroll">💰 Payroll</a></li>
           <li><button className="logout-btn" onClick={handleLogout}>🚪 Logout</button></li>
         </ul>
@@ -170,8 +171,12 @@ export default function LeaveRequestForm() {
         leaveYear: new Date().getFullYear()
       };
 
-      // Submit leave request (replace with actual endpoint)
-      await axios.post('/payflowapi/onboard-employee/apply', leaveRequest, {
+      console.log('Submitting leave request:', leaveRequest);
+      console.log('User data:', user);
+      console.log('Token:', token ? 'Present' : 'Missing');
+
+      // Submit leave request
+      await axios.post('/payflowapi/leave-requests/apply', leaveRequest, {
         headers: { Authorization: `Bearer ${token}` }
       });
 
@@ -188,7 +193,30 @@ export default function LeaveRequestForm() {
 
     } catch (error) {
       console.error('Error submitting leave request:', error);
-      setError(error.response?.data?.message || 'Failed to submit leave request');
+      console.error('Error response:', error.response);
+      console.error('Error request:', error.request);
+      
+      let errorMessage = 'Failed to submit leave request';
+      
+      if (error.response) {
+        // Server responded with error status
+        console.error('Server Error Status:', error.response.status);
+        console.error('Server Error Data:', error.response.data);
+        
+        if (error.response.data) {
+          errorMessage = error.response.data.message || 
+                        error.response.data.error || 
+                        `Server error: ${error.response.status}`;
+        }
+      } else if (error.request) {
+        // Request was made but no response received
+        errorMessage = 'No response from server. Please check if the backend is running.';
+      } else {
+        // Something else happened
+        errorMessage = error.message || 'Request setup error';
+      }
+      
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
