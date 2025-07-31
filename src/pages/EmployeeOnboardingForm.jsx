@@ -207,11 +207,7 @@ const EmployeeOnboardingForm = () => {
                   ))
                 )}
               </select>
-              {managers.length === 0 && (
-                <div style={{color: '#f44336', fontSize: '0.9rem', marginTop: '0.3rem'}}>
-                  No managers found. Check console for errors.
-                </div>
-              )}
+              
             </>
           )}
           <small style={{color: '#666', fontSize: '0.9rem', marginTop: '0.3rem', display: 'block'}}>
