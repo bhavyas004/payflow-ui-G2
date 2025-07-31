@@ -14,7 +14,7 @@ import EmployeeDashboard from './pages/EmployeeDashboard'; // Assuming you have 
 import EmployeeLoginForm from './pages/EmployeeLoginForm'; // Assuming you have this page
 import EmployeeLeaveRequests from './pages/EmployeeLeaveRequests'; // Import the employee leave requests page
 import LeaveRequestForm from './pages/LeaveRequestForm'; // Assuming you have this page
-
+import ManagerLeaveRequests from './pages/ManagerLeaveRequests';
 
 function App() {
   return (
@@ -35,6 +35,7 @@ function App() {
         {/* <Route path="*" element={<div>Page Not Found</div>} /> */}
         <Route path="/reset-password" element={<PasswordReset />} />
         <Route path="employee-leave-request" element={<LeaveRequestForm />} />
+        <Route path="/manager-leave-requests" element={<ManagerLeaveRequests />} />
       </Routes>
     </Router>
   );

@@ -32,9 +32,10 @@ function ManagerSidebar({ active }) {
       <div className="sidebar-logo">PayFlow</div>
       <nav>
         <ul>
-          <li className={active === 'dashboard' ? 'active' : ''}><a href="/hr-dashboard">🏠 Dashboard</a></li>
+          <li className={active === 'dashboard' ? 'active' : ''}><a href="/manager-dashboard">🏠 Dashboard</a></li>
           <li className={active === 'employees' ? 'active' : ''}><a href="/hr-employees">👥 Employees</a></li>
           <li className={active === 'onboarding' ? 'active' : ''}><a href="/onboarding">📝 Onboarding</a></li>
+          <li className={active === 'leave-requests' ? 'active' : ''}><a href="/manager-leave-requests">📋 Leave Requests</a></li>
         </ul>
       </nav>
     </aside>
@@ -47,6 +48,7 @@ export default function ManagerDashboard() {
   const [stats, setStats] = useState({ TOTAL: 0, ACTIVE: 0, INACTIVE: 0, RECENT: 0 });
   const [loading, setLoading] = useState(true);
   const [employees, setEmployees] = useState([]);
+  const [leaveStats, setLeaveStats] = useState({ PENDING: 0, APPROVED: 0, REJECTED: 0 });
   const [events] = useState([
     { date: '2025-07-10', title: 'John D. Birthday' },
     { date: '2025-07-12', title: 'Probation Review: Jane S.' },
@@ -66,7 +68,7 @@ export default function ManagerDashboard() {
         setLoading(true);
         const token = localStorage.getItem('jwtToken');
         
-        // Fetch statistics and employees
+        // Fetch basic statistics and employees first
         const [totalEmpRes, activeEmpRes, inactiveEmpRes, employeesRes] = await Promise.all([
           axios.get('/payflowapi/stats/employees/total', {
             headers: { Authorization: `Bearer ${token}` }
@@ -101,10 +103,32 @@ export default function ManagerDashboard() {
         });
 
         setEmployees(employeesRes.data || []);
+        
+        // Fetch leave statistics separately with error handling
+        try {
+          const leaveStatsRes = await axios.get('/payflowapi/leave-requests/manager/stats', {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          
+          console.log('Leave stats response:', leaveStatsRes.data);
+          
+          if (leaveStatsRes.data && leaveStatsRes.data.success) {
+            setLeaveStats(leaveStatsRes.data.data);
+          } else {
+            console.warn('Leave stats API did not return success:', leaveStatsRes.data);
+            setLeaveStats({ PENDING: 0, APPROVED: 0, REJECTED: 0 });
+          }
+        } catch (leaveError) {
+          console.error('Error fetching leave stats:', leaveError);
+          console.error('Leave stats error response:', leaveError.response?.data);
+          setLeaveStats({ PENDING: 0, APPROVED: 0, REJECTED: 0 });
+        }
+        
       } catch (error) {
         console.error('Error fetching Manager dashboard data:', error);
         setStats({ TOTAL: 0, ACTIVE: 0, INACTIVE: 0, RECENT: 0 });
         setEmployees([]);
+        setLeaveStats({ PENDING: 0, APPROVED: 0, REJECTED: 0 });
       } finally {
         setLoading(false);
       }
@@ -142,10 +166,10 @@ export default function ManagerDashboard() {
               onClick={() => navigate('/hr-employees')} 
             />
             <SummaryCard 
-              title="Inactive Employees" 
-              value={loading ? '...' : stats.INACTIVE} 
+              title="Pending Leaves" 
+              value={loading ? '...' : leaveStats.PENDING} 
               actionable 
-              onClick={() => navigate('/hr-employees')} 
+              onClick={() => navigate('/manager-leave-requests')} 
             />
             <SummaryCard 
               title="Recently Onboarded" 
@@ -154,15 +178,36 @@ export default function ManagerDashboard() {
               onClick={() => navigate('/hr-employees')} 
             />
           </div>
+          
+          {/* Leave Request Quick Actions */}
           <div className="dashboard-widgets-row">
             <MiniCalendar events={events} />
-            <QuickActions
-              onAddEmployee={() => navigate('/onboarding')}
-              onImportBulk={() => {}}
-              onAddHRManager={() => {}}
-            />
+            <div className="leave-quick-actions">
+              <h3>Leave Management</h3>
+              <div className="leave-action-buttons">
+                <button 
+                  className="action-btn pending" 
+                  onClick={() => navigate('/manager-leave-requests?status=PENDING')}
+                >
+                  Pending Requests ({leaveStats.PENDING || 0})
+                </button>
+                <button 
+                  className="action-btn approved" 
+                  onClick={() => navigate('/manager-leave-requests?status=APPROVED')}
+                >
+                  Approved ({leaveStats.APPROVED || 0})
+                </button>
+                <button 
+                  className="action-btn rejected" 
+                  onClick={() => navigate('/manager-leave-requests?status=REJECTED')}
+                >
+                  Rejected ({leaveStats.REJECTED || 0})
+                </button>
+              </div>
+            </div>
           </div>
-          <h3 style={{marginTop: '2rem'}}>Onboarded Employees</h3>
+          
+          <h3 style={{marginTop: '2rem'}}>My Team Members</h3>
           <div className="table-container">
             <table className="onboard-table">
               <thead>
@@ -183,7 +228,7 @@ export default function ManagerDashboard() {
                   </tr>
                 ) : employees.length === 0 ? (
                   <tr>
-                    <td colSpan="7" style={{textAlign: 'center', padding: '2rem'}}>No employees found</td>
+                    <td colSpan="7" style={{textAlign: 'center', padding: '2rem'}}>No team members found</td>
                   </tr>
                 ) : (
                   employees.map(emp => (
