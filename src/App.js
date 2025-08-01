@@ -15,7 +15,11 @@ import EmployeeLoginForm from './pages/EmployeeLoginForm'; // Assuming you have 
 import EmployeeLeaveRequests from './pages/EmployeeLeaveRequests'; // Import the employee leave requests page
 import LeaveRequestForm from './pages/LeaveRequestForm'; // Assuming you have this page
 import ManagerLeaveRequests from './pages/ManagerLeaveRequests';
-
+import HRPayroll from './pages/HRPayroll';
+import CTCManagement from './pages/CTCManagement';
+import PayslipView from './pages/PayslipView';
+import ManagerEmployees from './pages/ManagerEmployees';
+import ManagerEmployeeOnboarding from './pages/ManagerEmployeeOnboarding';
 function App() {
   return (
     <Router>
@@ -36,6 +40,11 @@ function App() {
         <Route path="/reset-password" element={<PasswordReset />} />
         <Route path="employee-leave-request" element={<LeaveRequestForm />} />
         <Route path="/manager-leave-requests" element={<ManagerLeaveRequests />} />
+        <Route path="/hr-payroll" element={<HRPayroll />} />
+        <Route path="/ctc-management" element={<CTCManagement />} />
+        <Route path="/payslip-view" element={<PayslipView />} />
+        <Route path="/manager-employees" element={<ManagerEmployees />} />
+<Route path="/manager-onboarding" element={<ManagerEmployeeOnboarding />} />
       </Routes>
     </Router>
   );

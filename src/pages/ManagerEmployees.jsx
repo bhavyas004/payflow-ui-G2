@@ -39,15 +39,8 @@ function HRSidebar({ active }) {
           <li className={active === 'onboarding' ? 'active' : ''}>
             <a href="/onboarding">📝 Onboarding</a>
           </li>
-          {/* New Payroll Menu Items */}
-          <li className={active === 'payroll' ? 'active' : ''}>
-            <a href="/hr-payroll">💰 Payroll</a>
-          </li>
-          <li className={active === 'ctc' ? 'active' : ''}>
-            <a href="/ctc-management">📊 CTC Management</a>
-          </li>
-          <li className={active === 'payslips' ? 'active' : ''}>
-            <a href="/payslip-view">📄 Payslips</a>
+          <li className={active === 'leave' ? 'active' : ''}>
+            <a href="/manager-leave-requests">📅 leave requests</a>
           </li>
         </ul>
       </nav>
@@ -55,7 +48,7 @@ function HRSidebar({ active }) {
   );
 }
 
-export default function HREmployeeManagement() {
+export default function ManagerEmployees() {
   const [user, setUser] = useState({ name: 'HR Name' });
   const [employees, setEmployees] = useState([]);
   const [search, setSearch] = useState('');

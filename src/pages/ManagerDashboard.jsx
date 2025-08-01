@@ -29,19 +29,26 @@ function parseJwt(token) {
 function ManagerSidebar({ active }) {
   return (
     <aside className="sidebar">
-      <div className="sidebar-logo">PayFlow</div>
+      <div className="sidebar-logo">PayFlow Manager</div>
       <nav>
         <ul>
-          <li className={active === 'dashboard' ? 'active' : ''}><a href="/manager-dashboard">🏠 Dashboard</a></li>
-          <li className={active === 'employees' ? 'active' : ''}><a href="/hr-employees">👥 Employees</a></li>
-          <li className={active === 'onboarding' ? 'active' : ''}><a href="/onboarding">📝 Onboarding</a></li>
-          <li className={active === 'leave-requests' ? 'active' : ''}><a href="/manager-leave-requests">📋 Leave Requests</a></li>
+          <li className={active === 'dashboard' ? 'active' : ''}>
+            <a href="/manager-dashboard">🏠 Dashboard</a>
+          </li>
+          <li className={active === 'employees' ? 'active' : ''}>
+            <a href="/manager-employees">👥 Employees</a>
+          </li>
+          <li className={active === 'onboarding' ? 'active' : ''}>
+            <a href="/manager-onboarding">📝 Onboarding</a>
+          </li>
+          <li className={active === 'leave-requests' ? 'active' : ''}>
+            <a href="/manager-leave-requests">📅 Leave Requests</a>
+          </li>
         </ul>
       </nav>
     </aside>
   );
 }
-
 export default function ManagerDashboard() {
   const [user, setUser] = useState({ name: 'Manager Name' });
   const navigate = useNavigate();
@@ -206,7 +213,17 @@ export default function ManagerDashboard() {
               </div>
             </div>
           </div>
-          
+          <div className="quick-action-card" onClick={() => navigate('/manager-employees')}>
+  <div className="action-icon">👥</div>
+  <h3>My Team</h3>
+  <p>View and manage your team members</p>
+</div>
+
+<div className="quick-action-card" onClick={() => navigate('/manager-onboarding')}>
+  <div className="action-icon">📝</div>
+  <h3>Add Team Member</h3>
+  <p>Onboard new employees to your team</p>
+</div>
           <h3 style={{marginTop: '2rem'}}>My Team Members</h3>
           <div className="table-container">
             <table className="onboard-table">
