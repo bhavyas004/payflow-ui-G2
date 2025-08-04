@@ -85,18 +85,22 @@ export default function EmployeeDashboard() {
         const payload = parseJwt(token);
         const employeeId = payload.employeeId;
         
+        console.log('Fetching data for employee ID:', employeeId);
+        
         if (employeeId) {
-          // Fetch comprehensive leave calculations for the employee
           try {
+            // Use the new calculations endpoint
             const leaveCalcRes = await axios.get(`/payflowapi/leave-requests/calculations/employee/${employeeId}`, {
               headers: { Authorization: `Bearer ${token}` }
             });
+            
+            console.log('Leave calculations response:', leaveCalcRes.data);
             
             if (leaveCalcRes.data.success) {
               const leaveData = leaveCalcRes.data.data;
               setStats({
                 totalLeaves: leaveData.totalLeavesPerYear || 12,
-                remainingLeaves: leaveData.remainingLeaves || 0,
+                remainingLeaves: leaveData.remainingLeaves || 12,
                 usedLeaves: leaveData.usedLeaves || 0,
                 pendingLeaves: leaveData.pendingLeaves || 0,
                 todaysDate: new Date().toLocaleDateString(),
@@ -109,36 +113,73 @@ export default function EmployeeDashboard() {
             } else {
               throw new Error('Failed to fetch leave calculations');
             }
-          } catch (leaveError) {
-            console.log('Leave calculations not available, trying basic balance endpoint');
             
-            // Fallback to basic leave balance endpoint
+          } catch (leaveError) {
+            console.error('Leave calculations error:', leaveError);
+            
+            // Fallback to simple balance endpoint
             try {
-              const leaveBalanceRes = await axios.get(`/payflowapi/leave-requests/balance/${employeeId}`, {
+              const leaveBalanceRes = await axios.get(`/payflowapi/leave-requests/balance/simple/${employeeId}`, {
                 headers: { Authorization: `Bearer ${token}` }
               });
               
-              const leaveBalance = leaveBalanceRes.data;
+              console.log('Simple balance response:', leaveBalanceRes.data);
+              
               setStats({
-                totalLeaves: leaveBalance.total || 12,
-                remainingLeaves: leaveBalance.remaining || 0,
-                usedLeaves: leaveBalance.used || 0,
-                pendingLeaves: 0,
+                totalLeaves: leaveBalanceRes.data.total || 12,
+                remainingLeaves: leaveBalanceRes.data.remaining || 12,
+                usedLeaves: leaveBalanceRes.data.used || 0,
+                pendingLeaves: leaveBalanceRes.data.pending || 0,
                 todaysDate: new Date().toLocaleDateString()
               });
+              
             } catch (balanceError) {
-              console.log('Using default leave values');
-              setStats({
-                totalLeaves: 12,
-                remainingLeaves: 12,
-                usedLeaves: 0,
-                pendingLeaves: 0,
-                todaysDate: new Date().toLocaleDateString()
-              });
+              console.error('Balance endpoint error:', balanceError);
+              
+              // Final fallback: use leave requests to calculate manually
+              try {
+                const leaveRequestsRes = await axios.get(`/payflowapi/leave-requests/employee/${employeeId}`, {
+                  headers: { Authorization: `Bearer ${token}` }
+                });
+                
+                if (leaveRequestsRes.data.success) {
+                  const allRequests = leaveRequestsRes.data.data || [];
+                  
+                  // Calculate manually
+                  const approvedRequests = allRequests.filter(req => req.status?.toLowerCase() === 'approved');
+                  const pendingRequests = allRequests.filter(req => req.status?.toLowerCase() === 'pending');
+                  
+                  const usedDays = approvedRequests.reduce((total, req) => total + (req.totalDays || 0), 0);
+                  const pendingDays = pendingRequests.reduce((total, req) => total + (req.totalDays || 0), 0);
+                  
+                  setStats({
+                    totalLeaves: 12,
+                    remainingLeaves: Math.max(0, 12 - usedDays),
+                    usedLeaves: usedDays,
+                    pendingLeaves: pendingDays,
+                    todaysDate: new Date().toLocaleDateString(),
+                    totalRequests: allRequests.length,
+                    approvedRequests: approvedRequests.length,
+                    pendingRequests: pendingRequests.length,
+                    rejectedRequests: allRequests.filter(req => req.status?.toLowerCase() === 'rejected').length
+                  });
+                } else {
+                  throw new Error('No leave data available');
+                }
+              } catch (finalError) {
+                console.error('All endpoints failed:', finalError);
+                setStats({
+                  totalLeaves: 12,
+                  remainingLeaves: 12,
+                  usedLeaves: 0,
+                  pendingLeaves: 0,
+                  todaysDate: new Date().toLocaleDateString()
+                });
+              }
             }
           }
         } else {
-          // Fallback if no employeeId
+          console.error('No employee ID found in token');
           setStats({
             totalLeaves: 12,
             remainingLeaves: 12,
@@ -148,23 +189,20 @@ export default function EmployeeDashboard() {
           });
         }
         
-        console.log('Employee Dashboard - User data:', {
-          name: user.name,
-          employeeId: user.employeeId,
-          status: user.status
-        });
       } catch (error) {
         console.error('Error fetching employee dashboard data:', error);
         setStats({ 
           totalLeaves: 12, 
           remainingLeaves: 12, 
           usedLeaves: 0, 
+          pendingLeaves: 0,
           todaysDate: new Date().toLocaleDateString() 
         });
       } finally {
         setLoading(false);
       }
     }
+    
     fetchEmployeeData();
   }, []);
 

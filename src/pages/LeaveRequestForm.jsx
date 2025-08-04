@@ -106,12 +106,45 @@ export default function LeaveRequestForm() {
       }
       
       // Mock leave balance - you can replace with actual API call
-      // For now using static data since leave balance endpoint doesn't exist yet
-      setLeaveBalance({ remaining: 12, used: 0, total: 12 });
+      fetchLeaveBalance(employeeId, token);
+      // setLeaveBalance({ remaining: 12, used: 0, total: 12 });
       
     } catch (error) {
       console.error('Error fetching employee details:', error);
       setError('Failed to fetch employee details');
+    }
+  };
+
+  const fetchLeaveBalance = async (employeeId, token) => {
+    try {
+      // Use the new calculations endpoint
+      const leaveCalcRes = await axios.get(`/payflowapi/leave-requests/employee/${employeeId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      console.log('Leave calculations response:', leaveCalcRes.data);
+      
+      if (leaveRequestsRes.data.success) {
+        const allRequests = leaveRequestsRes.data.data || [];
+        
+        // Calculate manually
+        const approvedRequests = allRequests.filter(req => req.status?.toLowerCase() === 'approved');
+        const pendingRequests = allRequests.filter(req => req.status?.toLowerCase() === 'pending');
+        
+        const usedDays = approvedRequests.reduce((total, req) => total + (req.totalDays || 0), 0);
+        const pendingDays = pendingRequests.reduce((total, req) => total + (req.totalDays || 0), 0);
+        
+        setLeaveBalance({
+          total: 12,
+          remaining: Math.max(0, 12 - usedDays),
+          used: usedDays
+        });
+      } else {
+        throw new Error('No leave data available');
+      }
+    } catch (leaveError) {
+      console.error('Leave calculations error:', leaveError);
+      setError('Failed to fetch leave balance');
     }
   };
 

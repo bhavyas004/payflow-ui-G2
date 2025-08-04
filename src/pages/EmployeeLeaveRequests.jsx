@@ -47,17 +47,27 @@ function EmployeeSidebar({ active }) {
   );
 }
 
+// ...existing code...
+
 export default function EmployeeLeaveRequests() {
   const [user, setUser] = useState({ name: 'Employee' });
   const navigate = useNavigate();
   const [leaveRequests, setLeaveRequests] = useState([]);
+  const [allLeaveRequests, setAllLeaveRequests] = useState([]); // Store all requests
   const [loading, setLoading] = useState(true);
   const [selectedTab, setSelectedTab] = useState('all');
   const [error, setError] = useState('');
   const [currentPage, setCurrentPage] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
   const [totalElements, setTotalElements] = useState(0);
-  const [totalAllRequests, setTotalAllRequests] = useState(0); // Track total requests across all statuses
+  
+  // Counts for each status
+  const [statusCounts, setStatusCounts] = useState({
+    all: 0,
+    pending: 0,
+    approved: 0,
+    rejected: 0
+  });
 
   useEffect(() => {
     // Extract user info from JWT token
@@ -73,10 +83,15 @@ export default function EmployeeLeaveRequests() {
   }, []);
 
   useEffect(() => {
-    fetchLeaveRequests();
-  }, [selectedTab, currentPage]);
+    fetchAllLeaveRequests();
+  }, []);
 
-  const fetchLeaveRequests = async () => {
+  useEffect(() => {
+    filterRequestsByTab();
+  }, [selectedTab, currentPage, allLeaveRequests]);
+
+  // Fetch all leave requests and calculate counts
+  const fetchAllLeaveRequests = async () => {
     try {
       setLoading(true);
       setError('');
@@ -89,48 +104,78 @@ export default function EmployeeLeaveRequests() {
         return;
       }
 
-      let url = `/payflowapi/leave-requests/employee/${employeeId}?page=${currentPage}&size=10`;
-      if (selectedTab !== 'all') {
-        url = `/payflowapi/leave-requests/status/${selectedTab.toUpperCase()}?employeeId=${employeeId}&page=${currentPage}&size=10`;
-      }
+      // Fetch all requests at once (with a large page size to get everything)
+      const url = `/payflowapi/leave-requests/employee/${employeeId}?page=0&size=1000`;
+      
+      console.log('Fetching all requests from URL:', url);
 
       const response = await axios.get(url, {
         headers: { Authorization: `Bearer ${token}` }
       });
 
+      console.log('API Response:', response.data);
+
       if (response.data.success) {
-        const requests = response.data.data || [];
-        setLeaveRequests(requests);
-        setTotalPages(response.data.totalPages || 0);
-        setTotalElements(response.data.totalElements || 0);
+        const allRequests = response.data.data || [];
+        setAllLeaveRequests(allRequests);
+
+        // Calculate counts for each status
+        const counts = {
+          all: allRequests.length,
+          pending: allRequests.filter(req => req.status?.toLowerCase() === 'pending').length,
+          approved: allRequests.filter(req => req.status?.toLowerCase() === 'approved').length,
+          rejected: allRequests.filter(req => req.status?.toLowerCase() === 'rejected').length
+        };
+        
+        setStatusCounts(counts);
+        
+        console.log('Status counts:', counts);
+        
+        // Filter requests for current tab
+        filterRequestsByTabStatus(allRequests, selectedTab);
+        
       } else {
         setError('Failed to fetch leave requests');
+        setAllLeaveRequests([]);
         setLeaveRequests([]);
-      }
-
-      // If we're on a filtered tab, also fetch total count of all requests
-      if (selectedTab !== 'all') {
-        try {
-          const allRequestsUrl = `/payflowapi/leave-requests/employee/${employeeId}?page=0&size=1`;
-          const allResponse = await axios.get(allRequestsUrl, {
-            headers: { Authorization: `Bearer ${token}` }
-          });
-          if (allResponse.data.success) {
-            setTotalAllRequests(allResponse.data.totalElements || 0);
-          }
-        } catch (error) {
-          console.log('Could not fetch total request count');
-        }
-      } else {
-        setTotalAllRequests(totalElements);
+        setStatusCounts({ all: 0, pending: 0, approved: 0, rejected: 0 });
       }
     } catch (error) {
       console.error('Error fetching leave requests:', error);
       setError('Error loading leave requests');
+      setAllLeaveRequests([]);
       setLeaveRequests([]);
+      setStatusCounts({ all: 0, pending: 0, approved: 0, rejected: 0 });
     } finally {
       setLoading(false);
     }
+  };
+
+  // Filter requests based on selected tab
+  const filterRequestsByTab = () => {
+    filterRequestsByTabStatus(allLeaveRequests, selectedTab);
+  };
+
+  const filterRequestsByTabStatus = (requests, tab) => {
+    let filteredRequests = [];
+    
+    if (tab === 'all') {
+      filteredRequests = requests;
+    } else {
+      filteredRequests = requests.filter(req => 
+        req.status?.toLowerCase() === tab.toLowerCase()
+      );
+    }
+
+    // Apply pagination
+    const pageSize = 10;
+    const startIndex = currentPage * pageSize;
+    const endIndex = startIndex + pageSize;
+    const paginatedRequests = filteredRequests.slice(startIndex, endIndex);
+    
+    setLeaveRequests(paginatedRequests);
+    setTotalElements(filteredRequests.length);
+    setTotalPages(Math.ceil(filteredRequests.length / pageSize));
   };
 
   const getStatusBadgeClass = (status) => {
@@ -211,25 +256,25 @@ export default function EmployeeLeaveRequests() {
               className={`tab-btn ${selectedTab === 'all' ? 'active' : ''}`}
               onClick={() => handleTabChange('all')}
             >
-              All ({totalElements})
+              All ({statusCounts.all})
             </button>
             <button 
               className={`tab-btn ${selectedTab === 'pending' ? 'active' : ''}`}
               onClick={() => handleTabChange('pending')}
             >
-              Pending
+              Pending ({statusCounts.pending})
             </button>
             <button 
               className={`tab-btn ${selectedTab === 'approved' ? 'active' : ''}`}
               onClick={() => handleTabChange('approved')}
             >
-              Approved
+              Approved ({statusCounts.approved})
             </button>
             <button 
               className={`tab-btn ${selectedTab === 'rejected' ? 'active' : ''}`}
               onClick={() => handleTabChange('rejected')}
             >
-              Rejected
+              Rejected ({statusCounts.rejected})
             </button>
           </div>
 
@@ -241,7 +286,8 @@ export default function EmployeeLeaveRequests() {
               <div className="error-message">{error}</div>
             ) : leaveRequests.length === 0 ? (
               <div className="no-requests-message">
-                {selectedTab === 'all' || totalAllRequests === 0 ? (
+                {statusCounts.all === 0 ? (
+                  // Show "Apply for first leave" only if no requests exist at all
                   <>
                     <h3>No leave requests found</h3>
                     <p>You haven't applied for any leaves yet.</p>
@@ -253,10 +299,11 @@ export default function EmployeeLeaveRequests() {
                     </button>
                   </>
                 ) : (
+                  // Show filtered message if requests exist but none in current tab
                   <>
                     <h3>No {selectedTab} leave requests found</h3>
                     <p>You don't have any {selectedTab.toLowerCase()} leave requests at the moment.</p>
-                    <p>You have {totalAllRequests} total leave request{totalAllRequests !== 1 ? 's' : ''} in other categories.</p>
+                    
                   </>
                 )}
               </div>
@@ -292,7 +339,7 @@ export default function EmployeeLeaveRequests() {
 
                         <div className="leave-detail-row">
                           <span className="detail-label">Reason:</span>
-                          <span className="detail-value reason-text">
+                          <span className="detail-value">
                             {request.reason || 'No reason provided'}
                           </span>
                         </div>
@@ -308,6 +355,20 @@ export default function EmployeeLeaveRequests() {
                           <div className="leave-detail-row">
                             <span className="detail-label">Approved At:</span>
                             <span className="detail-value">{formatDateTime(request.approvedDate)}</span>
+                          </div>
+                        )}
+
+                        {request.rejectedBy && (
+                          <div className="leave-detail-row">
+                            <span className="detail-label">Rejected By:</span>
+                            <span className="detail-value">{request.rejectedBy}</span>
+                          </div>
+                        )}
+
+                        {request.rejectedAt && (
+                          <div className="leave-detail-row">
+                            <span className="detail-label">Rejected At:</span>
+                            <span className="detail-value">{formatDateTime(request.rejectedAt)}</span>
                           </div>
                         )}
 
