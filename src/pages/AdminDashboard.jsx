@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Sidebar from '../components/Sidebar';
 import SummaryCard from '../components/SummaryCard';
+// Add this import at the top
+import PayrollManagement from './AdminPayrollManagement';
 import '../styles/App.css';
 import axios from 'axios';
 
@@ -189,7 +191,7 @@ function ProfileAvatar() {
 
 export default function AdminDashboard() {
   const [user, setUser] = useState({ name: '' });
-  const [currentView, setCurrentView] = useState('dashboard'); // 'dashboard' or 'users'
+  const [currentView, setCurrentView] = useState('dashboard'); // 'dashboard', 'users', or 'payroll'
   const [summary, setSummary] = useState({
     totalUsers: 0,
     totalHRs: 0,
@@ -292,12 +294,23 @@ export default function AdminDashboard() {
           <ul>
             <li className={currentView === 'dashboard' ? 'active' : ''}><a href="#" onClick={(e) => {e.preventDefault(); setCurrentView('dashboard')}}>🏠 Dashboard</a></li>
             <li className={currentView === 'users' ? 'active' : ''}><a href="#" onClick={(e) => {e.preventDefault(); setCurrentView('users')}}>👥 Users</a></li>
+            <li className={currentView === 'payroll' ? 'active' : ''}><a href="#" onClick={(e) => {e.preventDefault(); setCurrentView('payroll')}}>💰 Payroll</a></li>
             <li><button className="logout-btn" onClick={handleLogout}>🚪 Logout</button></li>
           </ul>
         </nav>
       </aside>
       <div className="main-content admin-main-content">
-        {currentView === 'dashboard' ? (
+        {currentView === 'payroll' ? (
+          <div style={{ padding: '20px' }}>
+            <h2 style={{ marginBottom: '20px' }}>Payroll Management</h2>
+            <PayrollManagement />
+          </div>
+        ) : currentView === 'users' ? (
+          <div style={{ padding: '20px' }}>
+            <h2 style={{ marginBottom: '20px' }}>Users (HR & Managers)</h2>
+            <UserManagement />
+          </div>
+        ) : (
           <>
             {/* Header */}
             <div className="admin-header-row">
@@ -321,12 +334,8 @@ export default function AdminDashboard() {
               </button>
             </div>
           </>
-        ) : (
-          <div style={{ padding: '20px' }}>
-            <h2 style={{ marginBottom: '20px' }}>Users (HR & Managers)</h2>
-            <UserManagement />
-          </div>
         )}
+        
         {/* Create User Modal */}
         {showCreateModal && (
           <div className="modal-backdrop">

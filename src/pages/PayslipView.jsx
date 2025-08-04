@@ -21,8 +21,6 @@ function parseJwt(token) {
 }
 
 // Sidebar Component
-// Update your existing HRSidebar component
-
 function HRSidebar({ active }) {
   return (
     <aside className="sidebar">
@@ -38,7 +36,6 @@ function HRSidebar({ active }) {
           <li className={active === 'onboarding' ? 'active' : ''}>
             <a href="/onboarding">📝 Onboarding</a>
           </li>
-          {/* New Payroll Menu Items */}
           <li className={active === 'payroll' ? 'active' : ''}>
             <a href="/hr-payroll">💰 Payroll</a>
           </li>
@@ -55,7 +52,7 @@ function HRSidebar({ active }) {
 }
 
 // Payslip Card Component
-function PayslipCard({ payslip, employeeName, onDownload }) {
+function PayslipCard({ payslip, employeeName, onDownload, onView, downloading }) {
   return (
     <div className="payslip-card">
       <div className="payslip-header">
@@ -78,14 +75,18 @@ function PayslipCard({ payslip, employeeName, onDownload }) {
       </div>
       <div className="payslip-actions">
         <button 
+          className="btn btn-secondary btn-sm"
+          onClick={() => onView(payslip)}
+          style={{ marginRight: '8px' }}
+        >
+          👁️ View
+        </button>
+        <button 
           className="btn btn-primary btn-sm"
           onClick={() => onDownload(payslip)}
-          disabled={!payslip.downloadLink}
+          disabled={downloading}
         >
-          📄 Download
-        </button>
-        <button className="btn btn-secondary btn-sm">
-          👁️ View
+          {downloading ? '⏳ Downloading...' : '📄 Download'}
         </button>
       </div>
     </div>
@@ -98,6 +99,7 @@ export default function PayslipView() {
   const [payslips, setPayslips] = useState([]);
   const [filteredPayslips, setFilteredPayslips] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [downloading, setDownloading] = useState(false);
   const [employees, setEmployees] = useState([]);
   
   // Filter states
@@ -131,7 +133,7 @@ export default function PayslipView() {
       setLoading(true);
       const token = localStorage.getItem('jwtToken');
       
-      const response = await axios.get('/payflowapi/payroll/payslips', {
+      const response = await axios.get('http://localhost:8080/payflowapi/payroll/payslips', {
         headers: { Authorization: `Bearer ${token}` }
       });
       
@@ -149,7 +151,7 @@ export default function PayslipView() {
   const fetchEmployees = async () => {
     try {
       const token = localStorage.getItem('jwtToken');
-      const response = await axios.get('/payflowapi/onboard-employee/employees', {
+      const response = await axios.get('http://localhost:8080/payflowapi/onboard-employee/employees', {
         headers: { Authorization: `Bearer ${token}` }
       });
       setEmployees(response.data || []);
@@ -161,22 +163,18 @@ export default function PayslipView() {
   const applyFilters = () => {
     let filtered = [...payslips];
 
-    // Filter by month
     if (selectedMonth) {
       filtered = filtered.filter(payslip => payslip.month === selectedMonth);
     }
 
-    // Filter by year
     if (selectedYear) {
       filtered = filtered.filter(payslip => payslip.year === selectedYear);
     }
 
-    // Filter by employee
     if (selectedEmployee) {
       filtered = filtered.filter(payslip => payslip.employeeId === parseInt(selectedEmployee));
     }
 
-    // Search by employee name or ID
     if (searchTerm) {
       filtered = filtered.filter(payslip => {
         const employee = employees.find(emp => emp.id === payslip.employeeId);
@@ -189,29 +187,114 @@ export default function PayslipView() {
     setFilteredPayslips(filtered);
   };
 
-  const handleDownload = (payslip) => {
-    if (payslip.downloadLink) {
-      window.open(payslip.downloadLink, '_blank');
-    } else {
-      alert('Download link not available for this payslip');
+  // View payslip in new tab
+  const handleView = async (payslip) => {
+    try {
+      const token = localStorage.getItem('jwtToken');
+      const viewUrl = `http://localhost:8080/payflowapi/payroll/payslips/download/${payslip.employeeId}/${payslip.month.toLowerCase()}/${payslip.year}`;
+      
+      // Open in new tab with authorization header (this might not work due to CORS)
+      // Better approach: create a temporary URL with token
+      const newWindow = window.open('', '_blank');
+      
+      try {
+        const response = await fetch(viewUrl, {
+          method: 'GET',
+          headers: { 
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        
+        if (response.ok) {
+          const htmlContent = await response.text();
+          newWindow.document.write(htmlContent);
+          newWindow.document.close();
+        } else {
+          newWindow.close();
+          alert('Failed to view payslip');
+        }
+      } catch (error) {
+        newWindow.close();
+        console.error('Error viewing payslip:', error);
+        alert('Failed to view payslip. Please try downloading instead.');
+      }
+    } catch (error) {
+      console.error('Error viewing payslip:', error);
+      alert('Failed to view payslip. Please try again.');
     }
   };
 
+  // Download payslip as HTML file
+  const handleDownload = async (payslip) => {
+    try {
+      setDownloading(true);
+      const token = localStorage.getItem('jwtToken');
+      
+      const downloadUrl = `http://localhost:8080/payflowapi/payroll/payslips/download/${payslip.employeeId}/${payslip.month.toLowerCase()}/${payslip.year}`;
+      
+      console.log('Downloading from:', downloadUrl);
+      
+      const response = await fetch(downloadUrl, {
+        method: 'GET',
+        headers: { 
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      if (response.ok) {
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `payslip_${payslip.employeeId}_${payslip.month}_${payslip.year}.html`;
+        
+        // Trigger download
+        document.body.appendChild(link);
+        link.click();
+        
+        // Cleanup
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(url);
+        
+        alert('Payslip downloaded successfully! You can open the HTML file in your browser and print it as PDF.');
+      } else {
+        const errorData = await response.json().catch(() => ({}));
+        alert(`Download failed: ${errorData.error || 'Unknown error'}`);
+      }
+    } catch (error) {
+      console.error('Error downloading payslip:', error);
+      alert('Failed to download payslip. Please try again.');
+    } finally {
+      setDownloading(false);
+    }
+  };
+
+  // Generate payslips for the month
   const handleGeneratePayslips = async () => {
     try {
       const token = localStorage.getItem('jwtToken');
+      
       const currentMonth = new Date().toLocaleString('default', { month: 'long' }).toUpperCase();
       const currentYear = new Date().getFullYear();
+      
+      const monthToGenerate = prompt(`Enter month (current: ${currentMonth}):`) || currentMonth;
+      const yearToGenerate = parseInt(prompt(`Enter year (current: ${currentYear}):`) || currentYear);
 
-      await axios.post('/payflowapi/payroll/payslips/generate', {
-        month: currentMonth,
-        year: currentYear
+      console.log('Generating payslips for:', monthToGenerate, yearToGenerate);
+
+      const response = await axios.post('http://localhost:8080/payflowapi/payroll/payslips/generate', {
+        month: monthToGenerate.toUpperCase(),
+        year: yearToGenerate
       }, {
         headers: { Authorization: `Bearer ${token}` }
       });
 
-      alert('Monthly payslips generation initiated!');
-      fetchPayslips(); // Refresh the list
+      if (response.data.success) {
+        alert(`Monthly payslips generated successfully! Generated ${response.data.generated} out of ${response.data.totalEmployees} employees.`);
+        fetchPayslips(); // Refresh the list
+      } else {
+        alert('Failed to generate payslips: ' + response.data.error);
+      }
     } catch (error) {
       console.error('Error generating payslips:', error);
       alert('Failed to generate payslips. Please try again.');
@@ -345,6 +428,8 @@ export default function PayslipView() {
                     payslip={payslip}
                     employeeName={getEmployeeName(payslip.employeeId)}
                     onDownload={handleDownload}
+                    onView={handleView}
+                    downloading={downloading}
                   />
                 ))}
               </div>

@@ -20,6 +20,7 @@ import CTCManagement from './pages/CTCManagement';
 import PayslipView from './pages/PayslipView';
 import ManagerEmployees from './pages/ManagerEmployees';
 import ManagerEmployeeOnboarding from './pages/ManagerEmployeeOnboarding';
+import EmployeePayroll from './pages/EmployeePayroll';
 function App() {
   return (
     <Router>
@@ -45,6 +46,8 @@ function App() {
         <Route path="/payslip-view" element={<PayslipView />} />
         <Route path="/manager-employees" element={<ManagerEmployees />} />
 <Route path="/manager-onboarding" element={<ManagerEmployeeOnboarding />} />
+        <Route path="/employee-payroll" element={<EmployeePayroll />} />
+        
       </Routes>
     </Router>
   );
