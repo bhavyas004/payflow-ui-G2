@@ -124,8 +124,8 @@ export default function LeaveRequestForm() {
       
       console.log('Leave calculations response:', leaveCalcRes.data);
       
-      if (leaveRequestsRes.data.success) {
-        const allRequests = leaveRequestsRes.data.data || [];
+      if (leaveCalcRes.data.success) {
+        const allRequests = leaveCalcRes.data.data || [];
         
         // Calculate manually
         const approvedRequests = allRequests.filter(req => req.status?.toLowerCase() === 'approved');
