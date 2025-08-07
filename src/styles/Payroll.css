@@ -307,3 +307,229 @@
 .no-data p {
   font-size: 1.1rem;
 }
+
+/* Enhanced CTC Form Styles */
+.ctc-form-modal {
+  max-width: 1200px !important;
+  width: 95vw;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.ctc-form .form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 30px;
+  margin-bottom: 30px;
+}
+
+.form-section {
+  background: #f8f9fa;
+  padding: 25px;
+  border-radius: 10px;
+  border: 1px solid #e0e0e0;
+}
+
+.form-section.full-width {
+  grid-column: 1 / -1;
+}
+
+.form-section h4 {
+  margin: 0 0 20px 0;
+  color: #333;
+  font-size: 1.2rem;
+  border-bottom: 2px solid #007bff;
+  padding-bottom: 10px;
+}
+
+/* HR Input Fields */
+.form-section .form-group {
+  margin-bottom: 20px;
+}
+
+.form-section .form-group label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 600;
+  color: #333;
+}
+
+.form-section .form-group input[type="number"],
+.form-section .form-group input[type="date"] {
+  width: 100%;
+  padding: 12px;
+  border: 2px solid #ddd;
+  border-radius: 6px;
+  font-size: 1rem;
+  transition: border-color 0.3s;
+}
+
+.form-section .form-group input[type="number"]:focus,
+.form-section .form-group input[type="date"]:focus {
+  border-color: #007bff;
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+}
+
+.form-section .form-group small {
+  display: block;
+  color: #666;
+  font-size: 0.85rem;
+  margin-top: 5px;
+}
+
+/* Checkbox styling */
+.form-section .form-group input[type="checkbox"] {
+  margin-right: 10px;
+  transform: scale(1.2);
+}
+
+/* Auto-calculated Components */
+.calculated-field {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px;
+  background: white;
+  border-radius: 8px;
+  margin-bottom: 15px;
+  border-left: 4px solid #28a745;
+}
+
+.calculated-field label {
+  font-weight: 600;
+  color: #333;
+  margin: 0;
+}
+
+.calculated-value {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #28a745;
+}
+
+.calculated-field.total-ctc {
+  border-left-color: #007bff;
+  background: linear-gradient(135deg, #e3f2fd 0%, #f0f8ff 100%);
+}
+
+.calculated-field.total-ctc .total-amount {
+  font-size: 1.3rem;
+  font-weight: 800;
+  color: #007bff;
+}
+
+.calculated-field small {
+  display: block;
+  color: #666;
+  font-size: 0.8rem;
+  margin-top: 2px;
+}
+
+/* CTC Breakdown */
+.ctc-breakdown {
+  background: white;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid #ddd;
+}
+
+.breakdown-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px 20px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.breakdown-item:last-child {
+  border-bottom: none;
+}
+
+.breakdown-item.total {
+  background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+  color: white;
+  font-size: 1.1rem;
+}
+
+.breakdown-item span:first-child {
+  font-weight: 500;
+}
+
+.breakdown-item span:last-child {
+  font-weight: 600;
+  font-family: 'Courier New', monospace;
+}
+
+/* Form Actions */
+.ctc-form .form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 15px;
+  padding-top: 20px;
+  border-top: 1px solid #e0e0e0;
+}
+
+.ctc-form .btn {
+  padding: 12px 25px;
+  border-radius: 6px;
+  font-weight: 600;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.ctc-form .btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.ctc-form .btn-primary {
+  background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+  color: white;
+  border: none;
+}
+
+.ctc-form .btn-primary:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(0, 123, 255, 0.4);
+}
+
+.ctc-form .btn-secondary {
+  background: #6c757d;
+  color: white;
+  border: none;
+}
+
+.ctc-form .btn-secondary:hover {
+  background: #5a6268;
+}
+
+/* Responsive Design */
+@media (max-width: 1024px) {
+  .ctc-form .form-grid {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+  
+  .ctc-form-modal {
+    max-width: 95vw;
+  }
+}
+
+@media (max-width: 768px) {
+  .form-section {
+    padding: 20px;
+  }
+  
+  .breakdown-item {
+    padding: 12px 15px;
+  }
+  
+  .calculated-field {
+    padding: 12px;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+}

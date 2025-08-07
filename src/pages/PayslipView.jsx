@@ -1,3 +1,5 @@
+// Add this import with your other imports
+import PayslipGenerationForm from '../components/PayslipGenerationForm';
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
@@ -101,7 +103,9 @@ export default function PayslipView() {
   const [loading, setLoading] = useState(true);
   const [downloading, setDownloading] = useState(false);
   const [employees, setEmployees] = useState([]);
-  
+  // Add this state variable
+  const [showGenerationForm, setShowGenerationForm] = useState(false);
+
   // Filter states
   const [selectedMonth, setSelectedMonth] = useState('');
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
@@ -270,34 +274,49 @@ export default function PayslipView() {
   };
 
   // Generate payslips for the month
-  const handleGeneratePayslips = async () => {
+  const handleGeneratePayslips = () => {
+    setShowGenerationForm(true);
+  };
+
+  const handleCloseGenerationForm = () => {
+    setShowGenerationForm(false);
+  };
+
+  const handleGenerateConfirm = async (payload) => {
+    setLoading(true);
+    
     try {
       const token = localStorage.getItem('jwtToken');
       
-      const currentMonth = new Date().toLocaleString('default', { month: 'long' }).toUpperCase();
-      const currentYear = new Date().getFullYear();
-      
-      const monthToGenerate = prompt(`Enter month (current: ${currentMonth}):`) || currentMonth;
-      const yearToGenerate = parseInt(prompt(`Enter year (current: ${currentYear}):`) || currentYear);
+      console.log('🚀 Received payload from form:', payload);
 
-      console.log('Generating payslips for:', monthToGenerate, yearToGenerate);
-
-      const response = await axios.post('http://localhost:8080/payflowapi/payroll/payslips/generate', {
-        month: monthToGenerate.toUpperCase(),
-        year: yearToGenerate
-      }, {
-        headers: { Authorization: `Bearer ${token}` }
+      const response = await axios.post('/payflowapi/payroll/payslips/generate', payload, {
+        headers: { 
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
       });
 
-      if (response.data.success) {
-        alert(`Monthly payslips generated successfully! Generated ${response.data.generated} out of ${response.data.totalEmployees} employees.`);
-        fetchPayslips(); // Refresh the list
+      if (response.data.success || response.status === 200) {
+        console.log('✅ Payslips generated successfully:', response.data);
+        alert(`Successfully generated ${response.data.generated} payslips for ${response.data.employeesWithCTC} employees with CTC data.`);
+        
+        setShowGenerationForm(false);
+        // Refresh the payslips list
+        fetchPayslips();
       } else {
-        alert('Failed to generate payslips: ' + response.data.error);
+        throw new Error(response.data.message || 'Failed to generate payslips');
       }
     } catch (error) {
-      console.error('Error generating payslips:', error);
-      alert('Failed to generate payslips. Please try again.');
+      console.error('❌ Payslip generation failed:', error);
+      alert(`Failed to generate payslips: ${error.response?.data?.error || error.message}`);
+      // await showAlert({
+      //   title: 'Generation Failed',
+      //   message: `Failed to generate payslips: ${error.response?.data?.error || error.message}`,
+      //   variant: 'error'
+      // });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -332,17 +351,36 @@ export default function PayslipView() {
           <div className="payslip-header">
             <h2>Employee Payslips</h2>
             <div className="header-actions">
-              <button 
-                className="btn btn-success"
-                onClick={handleGeneratePayslips}
-              >
-                + Generate Monthly Payslips
-              </button>
-            </div>
+                <button 
+                  className="btn-primary generate-btn"
+                  onClick={handleGeneratePayslips}
+                  disabled={loading || showGenerationForm}
+                >
+                  {loading ? (
+                    <>⏳ Generating...</>
+                  ) : showGenerationForm ? (
+                    <>📝 Form Open</>
+                  ) : (
+                    <>🚀 Generate New Payslips</>
+                  )}
+                </button>
+              </div>
           </div>
 
+        {showGenerationForm && (
+          <PayslipGenerationForm 
+            isOpen={showGenerationForm}
+            onClose={handleCloseGenerationForm}
+            onGenerate={handleGenerateConfirm}
+            loading={loading}
+            />
+        )}
+  
           {/* Filters */}
-          <div className="filters-section">
+          {
+            !showGenerationForm && (
+              <>
+                        <div className="filters-section">
             <div className="filters-row">
               <div className="filter-group">
                 <label>Search:</label>
@@ -435,6 +473,9 @@ export default function PayslipView() {
               </div>
             )}
           </div>
+        </>
+            )
+          }
         </div>
       </div>
     </div>

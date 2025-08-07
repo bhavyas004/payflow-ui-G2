@@ -4,7 +4,6 @@ import Topbar from '../components/Topbar';
 import axios from 'axios';
 import '../styles/App.css';
 import '../styles/Payroll.css';
-
 // JWT parser function
 function parseJwt(token) {
   if (!token) return {};
@@ -58,29 +57,97 @@ function HRSidebar({ active }) {
 function CTCForm({ employee, onSave, onCancel }) {
   const [formData, setFormData] = useState({
     basicSalary: '',
-    hra: '',
-    allowances: '',
-    bonuses: '',
-    pfContribution: '',
-    gratuity: '',
-    effectiveFrom: new Date().toISOString().split('T')[0]
+    allowances: '', // Special allowances (covers transport, medical, etc.)
+    bonuses: '', // Variable pay/bonus (performance-based)
+    effectiveFrom: new Date().toISOString().split('T')[0],
+    isMetroCity: true // Toggle for HRA calculation (50% metro vs 40% non-metro)
   });
-  const [totalCTC, setTotalCTC] = useState(0);
+  
+  const [calculatedComponents, setCalculatedComponents] = useState({
+    hra: 0,
+    pfContribution: 0,
+    gratuity: 0,
+    totalCTC: 0
+  });
+  
   const [loading, setLoading] = useState(false);
+  const [calculating, setCalculating] = useState(false);
 
   useEffect(() => {
-    // Calculate total CTC whenever form data changes
-    const total = Object.keys(formData)
-      .filter(key => key !== 'effectiveFrom')
-      .reduce((sum, key) => sum + (parseFloat(formData[key]) || 0), 0);
-    setTotalCTC(total);
-  }, [formData]);
+    // Debounce calculation to avoid too many API calls
+    const timeoutId = setTimeout(() => {
+      calculateCTCPreview();
+    }, 500);
+
+    return () => clearTimeout(timeoutId);
+  }, [formData.basicSalary, formData.allowances, formData.bonuses, formData.isMetroCity]);
+
+  const calculateCTCPreview = async () => {
+    const basicSalary = parseFloat(formData.basicSalary) || 0;
+    
+    if (basicSalary <= 0) {
+      setCalculatedComponents({
+        hra: 0,
+        pfContribution: 0,
+        gratuity: 0,
+        totalCTC: 0
+      });
+      return;
+    }
+
+    try {
+      setCalculating(true);
+      const token = localStorage.getItem('jwtToken');
+      
+      const response = await axios.post('/payflowapi/payroll/ctc/preview', {
+        basicSalary: basicSalary,
+        allowances: parseFloat(formData.allowances) || 0,
+        bonuses: parseFloat(formData.bonuses) || 0,
+        isMetroCity: formData.isMetroCity
+      }, {
+        headers: { 
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.data.success) {
+        const data = response.data.data;
+        setCalculatedComponents({
+          hra: data.hra,
+          pfContribution: data.pfContribution,
+          gratuity: data.gratuity,
+          totalCTC: data.totalCTC
+        });
+      }
+    } catch (error) {
+      console.error('Error calculating CTC preview:', error);
+      // Fall back to frontend calculation if backend fails
+      const basicSalary = parseFloat(formData.basicSalary) || 0;
+      const allowances = parseFloat(formData.allowances) || 0;
+      const bonuses = parseFloat(formData.bonuses) || 0;
+      
+      const hra = basicSalary * (formData.isMetroCity ? 0.50 : 0.40);
+      const pfContribution = basicSalary * 0.12;
+      const gratuity = basicSalary * 0.0481;
+      const totalCTC = basicSalary + hra + allowances + bonuses + pfContribution + gratuity;
+      
+      setCalculatedComponents({
+        hra: Math.round(hra),
+        pfContribution: Math.round(pfContribution),
+        gratuity: Math.round(gratuity),
+        totalCTC: Math.round(totalCTC)
+      });
+    } finally {
+      setCalculating(false);
+    }
+  };
 
   const handleInputChange = (e) => {
-    const { name, value } = e.target;
+    const { name, value, type, checked } = e.target;
     setFormData(prev => ({
       ...prev,
-      [name]: value
+      [name]: type === 'checkbox' ? checked : value
     }));
   };
 
@@ -93,13 +160,13 @@ function CTCForm({ employee, onSave, onCancel }) {
       const ctcData = {
         employeeId: employee.id,
         basicSalary: parseFloat(formData.basicSalary) || 0,
-        hra: parseFloat(formData.hra) || 0,
+        hra: calculatedComponents.hra,
         allowances: parseFloat(formData.allowances) || 0,
         bonuses: parseFloat(formData.bonuses) || 0,
-        pfContribution: parseFloat(formData.pfContribution) || 0,
-        gratuity: parseFloat(formData.gratuity) || 0,
+        pfContribution: calculatedComponents.pfContribution,
+        gratuity: calculatedComponents.gratuity,
         effectiveFrom: formData.effectiveFrom,
-        totalCtc: totalCTC
+        totalCtc: calculatedComponents.totalCTC
       };
 
       console.log('Sending CTC data:', ctcData);
@@ -150,93 +217,144 @@ function CTCForm({ employee, onSave, onCancel }) {
 
         <form onSubmit={handleSubmit} className="ctc-form">
           <div className="form-grid">
-            <div className="form-group">
-              <label>Basic Salary (₹)</label>
-              <input
-                type="number"
-                name="basicSalary"
-                value={formData.basicSalary}
-                onChange={handleInputChange}
-                min="0"
-                step="0.01"
-                required
-              />
+            {/* HR Input Fields */}
+            <div className="form-section">
+              <h4>💼 HR Input Fields</h4>
+              
+              <div className="form-group">
+                <label>Basic Salary (₹) *</label>
+                <input
+                  type="number"
+                  name="basicSalary"
+                  value={formData.basicSalary}
+                  onChange={handleInputChange}
+                  min="0"
+                  step="0.01"
+                  required
+                  placeholder="Enter basic salary"
+                />
+                <small>Base salary component (typically 40-50% of CTC)</small>
+              </div>
+
+              <div className="form-group">
+                <label>Special Allowances (₹)</label>
+                <input
+                  type="number"
+                  name="allowances"
+                  value={formData.allowances}
+                  onChange={handleInputChange}
+                  min="0"
+                  step="0.01"
+                  placeholder="Transport, medical, etc."
+                />
+                <small>Combined allowances (transport, medical, communication, etc.)</small>
+              </div>
+
+              <div className="form-group">
+                <label>Variable Pay/Bonus (₹)</label>
+                <input
+                  type="number"
+                  name="bonuses"
+                  value={formData.bonuses}
+                  onChange={handleInputChange}
+                  min="0"
+                  step="0.01"
+                  placeholder="Performance bonus"
+                />
+                <small>Annual performance-based bonus or variable pay</small>
+              </div>
+
+              <div className="form-group">
+                <label>
+                  <input
+                    type="checkbox"
+                    name="isMetroCity"
+                    checked={formData.isMetroCity}
+                    onChange={handleInputChange}
+                  />
+                  Metro City Employee
+                </label>
+                <small>Affects HRA calculation (50% metro vs 40% non-metro)</small>
+              </div>
+
+              <div className="form-group full-width">
+                <label>Effective From *</label>
+                <input
+                  type="date"
+                  name="effectiveFrom"
+                  value={formData.effectiveFrom}
+                  onChange={handleInputChange}
+                  required
+                />
+              </div>
             </div>
 
-            <div className="form-group">
-              <label>HRA (₹)</label>
-              <input
-                type="number"
-                name="hra"
-                value={formData.hra}
-                onChange={handleInputChange}
-                min="0"
-                step="0.01"
-              />
+            {/* Auto-calculated Components */}
+            <div className="form-section">
+              <h4>🧮 Auto-calculated Components {calculating && <span style={{color: '#007bff', fontSize: '0.9rem'}}>⏳ Calculating...</span>}</h4>
+              
+              <div className="calculated-field">
+                <label>HRA (House Rent Allowance)</label>
+                <div className="calculated-value">₹{calculatedComponents.hra.toLocaleString()}</div>
+                <small>{formData.isMetroCity ? '50%' : '40%'} of basic salary</small>
+              </div>
+
+              <div className="calculated-field">
+                <label>PF Contribution (Employer)</label>
+                <div className="calculated-value">₹{calculatedComponents.pfContribution.toLocaleString()}</div>
+                <small>12% of basic salary</small>
+              </div>
+
+              <div className="calculated-field">
+                <label>Gratuity Provision</label>
+                <div className="calculated-value">₹{calculatedComponents.gratuity.toLocaleString()}</div>
+                <small>4.81% of basic salary (annual provision)</small>
+              </div>
+              
+              <div className="calculated-field total-ctc">
+                <label>Total CTC</label>
+                <div className="total-amount">₹{calculatedComponents.totalCTC.toLocaleString()}</div>
+                <small>Sum of all components</small>
+              </div>
             </div>
 
-            <div className="form-group">
-              <label>Allowances (₹)</label>
-              <input
-                type="number"
-                name="allowances"
-                value={formData.allowances}
-                onChange={handleInputChange}
-                min="0"
-                step="0.01"
-              />
-            </div>
-
-            <div className="form-group">
-              <label>Bonuses (₹)</label>
-              <input
-                type="number"
-                name="bonuses"
-                value={formData.bonuses}
-                onChange={handleInputChange}
-                min="0"
-                step="0.01"
-              />
-            </div>
-
-            <div className="form-group">
-              <label>PF Contribution (₹)</label>
-              <input
-                type="number"
-                name="pfContribution"
-                value={formData.pfContribution}
-                onChange={handleInputChange}
-                min="0"
-                step="0.01"
-              />
-            </div>
-
-            <div className="form-group">
-              <label>Gratuity (₹)</label>
-              <input
-                type="number"
-                name="gratuity"
-                value={formData.gratuity}
-                onChange={handleInputChange}
-                min="0"
-                step="0.01"
-              />
-            </div>
-
-            <div className="form-group full-width">
-              <label>Effective From</label>
-              <input
-                type="date"
-                name="effectiveFrom"
-                value={formData.effectiveFrom}
-                onChange={handleInputChange}
-                required
-              />
-            </div>
-
-            <div className="form-group full-width total-ctc">
-              <label>Total CTC</label>
-              <div className="total-amount">₹{totalCTC.toLocaleString()}</div>
+            {/* CTC Breakdown */}
+            <div className="form-section full-width">
+              <h4>📊 CTC Breakdown Summary</h4>
+              <div className="ctc-breakdown">
+                <div className="breakdown-item">
+                  <span>Basic Salary</span>
+                  <span>₹{(parseFloat(formData.basicSalary) || 0).toLocaleString()}</span>
+                </div>
+                <div className="breakdown-item">
+                  <span>HRA ({formData.isMetroCity ? '50%' : '40%'} of basic)</span>
+                  <span>₹{calculatedComponents.hra.toLocaleString()}</span>
+                </div>
+                <div className="breakdown-item">
+                  <span>Special Allowances</span>
+                  <span>₹{(parseFloat(formData.allowances) || 0).toLocaleString()}</span>
+                </div>
+                <div className="breakdown-item">
+                  <span>Variable Pay/Bonus</span>
+                  <span>₹{(parseFloat(formData.bonuses) || 0).toLocaleString()}</span>
+                </div>
+                <div className="breakdown-item">
+                  <span>PF Contribution (12% of basic)</span>
+                  <span>₹{calculatedComponents.pfContribution.toLocaleString()}</span>
+                </div>
+                <div className="breakdown-item">
+                  <span>Gratuity Provision (4.81% of basic)</span>
+                  <span>₹{calculatedComponents.gratuity.toLocaleString()}</span>
+                </div>
+                <div className="breakdown-item total">
+                  <span><strong>Total Annual CTC</strong></span>
+                  <span><strong>₹{calculatedComponents.totalCTC.toLocaleString()}</strong></span>
+                </div>
+                <div className="breakdown-item" style={{background: '#f8f9fa', fontStyle: 'italic'}}>
+                  <span>Monthly Gross Salary (approx.)</span>
+                  <span>₹{Math.round(calculatedComponents.totalCTC / 12).toLocaleString()}</span>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -244,7 +362,7 @@ function CTCForm({ employee, onSave, onCancel }) {
             <button type="button" onClick={onCancel} className="btn btn-secondary">
               Cancel
             </button>
-            <button type="submit" disabled={loading} className="btn btn-primary">
+            <button type="submit" disabled={loading || !formData.basicSalary} className="btn btn-primary">
               {loading ? 'Saving...' : 'Save CTC'}
             </button>
           </div>
