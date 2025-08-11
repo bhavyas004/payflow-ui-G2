@@ -43,7 +43,7 @@ function RoleBasedSidebar({ active, className = '' }) {
   return (
     <aside className={`sidebar ${className}`}>
       <div className="sidebar-logo">
-        <span>PayFlow</span>
+        <span>PayFlow AI</span>
         <small>{role}</small>
       </div>
       
