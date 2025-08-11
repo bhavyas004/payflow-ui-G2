@@ -27,7 +27,7 @@ function EmployeeSidebar({ active }) {
   const navigate = useNavigate();
   
   const handleLogout = () => {
-    localStorage.removeItem('jwtToken');
+    sessionStorage.removeItem('jwtToken');
     navigate('/employee-login');
   };
 
@@ -71,7 +71,7 @@ export default function EmployeeLeaveRequests() {
 
   useEffect(() => {
     // Extract user info from JWT token
-    const token = localStorage.getItem('jwtToken');
+    const token = sessionStorage.getItem('jwtToken');
     if (token) {
       const payload = parseJwt(token);
       setUser({ 
@@ -95,7 +95,7 @@ export default function EmployeeLeaveRequests() {
     try {
       setLoading(true);
       setError('');
-      const token = localStorage.getItem('jwtToken');
+      const token = sessionStorage.getItem('jwtToken');
       const payload = parseJwt(token);
       const employeeId = payload.employeeId;
 
@@ -233,7 +233,7 @@ export default function EmployeeLeaveRequests() {
           title="My Leave Requests"
           user={user}
           onLogout={() => {
-            localStorage.removeItem('jwtToken');
+            sessionStorage.removeItem('jwtToken');
             navigate('/employee-login');
           }}
         />

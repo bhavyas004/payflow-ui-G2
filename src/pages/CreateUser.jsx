@@ -22,7 +22,7 @@ function CreateUser() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const token = localStorage.getItem('jwtToken');
+      const token = sessionStorage.getItem('jwtToken');
       await axios.post('/payflowapi/user/admin/create', formData, {
         headers: {
           Authorization: `Bearer ${token}`

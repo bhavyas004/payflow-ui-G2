@@ -118,7 +118,7 @@ export default function PayslipView() {
   ];
 
   useEffect(() => {
-    const token = localStorage.getItem('jwtToken');
+    const token = sessionStorage.getItem('jwtToken');
     if (token) {
       const payload = parseJwt(token);
       setUser({ name: payload.sub || payload.username || 'HR User' });
@@ -135,7 +135,7 @@ export default function PayslipView() {
   const fetchPayslips = async () => {
     try {
       setLoading(true);
-      const token = localStorage.getItem('jwtToken');
+      const token = sessionStorage.getItem('jwtToken');
       
       const response = await axios.get('http://localhost:8080/payflowapi/payroll/payslips', {
         headers: { Authorization: `Bearer ${token}` }
@@ -154,7 +154,7 @@ export default function PayslipView() {
 
   const fetchEmployees = async () => {
     try {
-      const token = localStorage.getItem('jwtToken');
+      const token = sessionStorage.getItem('jwtToken');
       const response = await axios.get('http://localhost:8080/payflowapi/onboard-employee/employees', {
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -194,7 +194,7 @@ export default function PayslipView() {
   // View payslip in new tab
   const handleView = async (payslip) => {
     try {
-      const token = localStorage.getItem('jwtToken');
+      const token = sessionStorage.getItem('jwtToken');
       const viewUrl = `http://localhost:8080/payflowapi/payroll/payslips/download/${payslip.employeeId}/${payslip.month.toLowerCase()}/${payslip.year}`;
       
       // Open in new tab with authorization header (this might not work due to CORS)
@@ -232,7 +232,7 @@ export default function PayslipView() {
   const handleDownload = async (payslip) => {
     try {
       setDownloading(true);
-      const token = localStorage.getItem('jwtToken');
+      const token = sessionStorage.getItem('jwtToken');
       
       const downloadUrl = `http://localhost:8080/payflowapi/payroll/payslips/download/${payslip.employeeId}/${payslip.month.toLowerCase()}/${payslip.year}`;
       
@@ -286,7 +286,7 @@ export default function PayslipView() {
     setLoading(true);
     
     try {
-      const token = localStorage.getItem('jwtToken');
+      const token = sessionStorage.getItem('jwtToken');
       
       console.log('🚀 Received payload from form:', payload);
 
@@ -336,7 +336,7 @@ export default function PayslipView() {
             <span>Welcome, {user.name}</span>
             <button 
               onClick={() => {
-                localStorage.removeItem('jwtToken');
+                sessionStorage.removeItem('jwtToken');
                 navigate('/');
               }}
               className="logout-btn"

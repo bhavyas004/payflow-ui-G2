@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Topbar from '../components/Topbar';
 import SummaryCard from '../components/SummaryCard';
 import QuickActions from '../components/QuickActions';
 import MiniCalendar from '../components/MiniCalendar';
+import CollapsibleSidebar from '../components/CollapsibleSidebar';
 import axios from 'axios';
 import '../styles/App.css';
 
@@ -25,34 +26,23 @@ function parseJwt(token) {
   }
 }
 
-// Custom Sidebar for Employee Dashboard
-function EmployeeSidebar({ active }) {
-  const navigate = useNavigate();
-  
-  const handleLogout = () => {
-    localStorage.removeItem('jwtToken');
-    navigate('/employee-login');
-  };
-
+// Employee Navigation Content
+function EmployeeNavigation({ active, onLogout }) {
   return (
-    <aside className="sidebar">
-      <div className="sidebar-logo">PayFlow</div>
-      <nav>
-        <ul>
-          <li className={active === 'dashboard' ? 'active' : ''}><a href="/employee-dashboard">🏠 Dashboard</a></li>
-          <li className={active === 'leave-requests' ? 'active' : ''}><a href="/employee-leave-requests">📋 My Leave Requests</a></li>
-          <li className={active === 'leave-request' ? 'active' : ''}><a href="/employee-leave-request">📝 Apply Leave</a></li>
-          <li className={active === 'payroll' ? 'active' : ''}><a href="/employee-payroll">💰 Payroll</a></li>
-          <li><button className="logout-btn" onClick={handleLogout}>🚪 Logout</button></li>
-        </ul>
-      </nav>
-    </aside>
+    <ul>
+      <li className={active === 'dashboard' ? 'active' : ''}><a href="/employee-dashboard">🏠 Dashboard</a></li>
+      <li className={active === 'leave-requests' ? 'active' : ''}><a href="/employee-leave-requests">📋 My Leave Requests</a></li>
+      <li className={active === 'leave-request' ? 'active' : ''}><a href="/employee-leave-request">📝 Apply Leave</a></li>
+      <li className={active === 'payroll' ? 'active' : ''}><a href="/employee-payroll">💰 Payroll</a></li>
+      <li><button className="btn btn-ghost btn-sm w-full" onClick={onLogout}>🚪 Logout</button></li>
+    </ul>
   );
 }
 
 export default function EmployeeDashboard() {
   const [user, setUser] = useState({ name: 'Employee' });
   const navigate = useNavigate();
+  const sidebarRef = useRef(null);
   const [stats, setStats] = useState({ 
     totalLeaves: 12, 
     remainingLeaves: 10, 
@@ -68,7 +58,7 @@ export default function EmployeeDashboard() {
 
   useEffect(() => {
     // Extract user info from JWT token
-    const token = localStorage.getItem('jwtToken');
+    const token = sessionStorage.getItem('jwtToken');
     if (token) {
       const payload = parseJwt(token);
       setUser({ 
@@ -81,7 +71,7 @@ export default function EmployeeDashboard() {
     async function fetchEmployeeData() {
       try {
         setLoading(true);
-        const token = localStorage.getItem('jwtToken');
+        const token = sessionStorage.getItem('jwtToken');
         const payload = parseJwt(token);
         const employeeId = payload.employeeId;
         
@@ -206,32 +196,41 @@ export default function EmployeeDashboard() {
     fetchEmployeeData();
   }, []);
 
+  const handleLogout = () => {
+    sessionStorage.removeItem('jwtToken');
+    navigate('/employee-login');
+  };
+
   return (
     <div className="dashboard-layout">
-      <EmployeeSidebar active="dashboard" />
+      <CollapsibleSidebar ref={sidebarRef} logo="PayFlow">
+        <EmployeeNavigation active="dashboard" onLogout={handleLogout} />
+      </CollapsibleSidebar>
       <div className="main-content">
         <Topbar
           title="Employee Dashboard"
           user={user}
-          onLogout={() => {
-            localStorage.removeItem('jwtToken');
-            navigate('/employee-login');
-          }}
+          onLogout={handleLogout}
+          sidebarRef={sidebarRef}
         />
-        <div className="dashboard-home">
-          {/* Welcome Message */}
-          <div className="admin-header-row">
-            <div className="welcome-message">👋 Welcome, {user.name}!</div>
-            <div className="header-right">
+        <div className="p-6">
+          {/* Welcome Section */}
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-8">
+            <div>
+              <h1 className="text-3xl font-bold mb-2">👋 Welcome, {user.name}!</h1>
+              <p className="text-gray-600">Here's your dashboard overview for today.</p>
+            </div>
+            <div className="flex items-center gap-4 mt-4 md:mt-0">
               <button 
-                className="view-leaves-btn" 
+                className="btn btn-primary" 
                 onClick={() => navigate('/employee-leave-requests')}
                 title="View My Leave Requests"
               >
                 📋 My Leave Requests
               </button>
-              <div className="employee-status">
-                Status: <span className={`status-badge ${user.status?.toLowerCase()}`}>
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-gray-600">Status:</span>
+                <span className={`badge ${user.status?.toLowerCase() === 'active' ? 'badge-success' : 'badge-warning'}`}>
                   {user.status || 'ACTIVE'}
                 </span>
               </div>
@@ -239,34 +238,38 @@ export default function EmployeeDashboard() {
           </div>
 
           {/* Summary Cards */}
-          <div className="summary-cards-row">
-            <SummaryCard 
-              title="Total Leaves" 
-              value={loading ? '...' : stats.totalLeaves} 
-              actionable 
-              onClick={() => navigate('/employee-leave-requests')} 
-            />
-            <SummaryCard 
-              title="Used Leaves" 
-              value={loading ? '...' : stats.usedLeaves} 
-              actionable 
-              onClick={() => navigate('/employee-leave-requests')} 
-            />
-            <SummaryCard 
-              title="Remaining Leaves" 
-              value={loading ? '...' : stats.remainingLeaves} 
-              actionable 
-              onClick={() => navigate('/employee-leave-requests')} 
-            />
-            <SummaryCard 
-              title="Today's Date" 
-              value={stats.todaysDate} 
-            />
+          <div className="mb-8">
+            <div className="summary-cards-container">
+              <div className="summary-cards-grid">
+                <SummaryCard 
+                  title="Total Leaves" 
+                  value={loading ? '...' : stats.totalLeaves} 
+                  actionable 
+                  onClick={() => navigate('/employee-leave-requests')} 
+                />
+                <SummaryCard 
+                  title="Used Leaves" 
+                  value={loading ? '...' : stats.usedLeaves} 
+                  actionable 
+                  onClick={() => navigate('/employee-leave-requests')} 
+                />
+                <SummaryCard 
+                  title="Remaining Leaves" 
+                  value={loading ? '...' : stats.remainingLeaves} 
+                  actionable 
+                  onClick={() => navigate('/employee-leave-requests')} 
+                />
+                <SummaryCard 
+                  title="Today's Date" 
+                  value={stats.todaysDate} 
+                />
+              </div>
+            </div>
           </div>
           
-          <div className="dashboard-widgets-row">
+          {/* Dashboard Widgets */}
+          <div className="grid grid-cols-1 lg:grid-cols-1 gap-6">
             <MiniCalendar events={events} />
-            
           </div>
         </div>
       </div>

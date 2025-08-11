@@ -59,7 +59,7 @@ export default function ManagerEmployees() {
 
   useEffect(() => {
     // Extract user info from JWT token
-    const token = localStorage.getItem('jwtToken');
+    const token = sessionStorage.getItem('jwtToken');
     if (token) {
       const payload = parseJwt(token);
       setUser({ name: payload.sub || payload.username || 'User' });
@@ -67,7 +67,7 @@ export default function ManagerEmployees() {
     
     const fetchEmployees = async () => {
       try {
-        const token = localStorage.getItem('jwtToken');
+        const token = sessionStorage.getItem('jwtToken');
         const res = await axios.get('/payflowapi/onboard-employee/employees', {
           headers: {
             Authorization: token ? `Bearer ${token}` : ''
@@ -164,7 +164,7 @@ export default function ManagerEmployees() {
                         className={`px-2 py-1 rounded-full text-white ${emp.status === 'ACTIVE' ? 'bg-green-500' : 'bg-red-500'}`}
                         onClick={async () => {
                           try {
-                            const token = localStorage.getItem('jwtToken');
+                            const token = sessionStorage.getItem('jwtToken');
                             const newStatus = emp.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE';
                             await axios.put(`/payflowapi/onboard-employee/${encodeURIComponent(emp.fullName)}/status`, { status: newStatus }, {
                               headers: {

@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Topbar from '../components/Topbar';
 import SummaryCard from '../components/SummaryCard';
 import QuickActions from '../components/QuickActions';
 import MiniCalendar from '../components/MiniCalendar';
+import CollapsibleSidebar from '../components/CollapsibleSidebar';
 import axios from 'axios';
 import '../styles/App.css';
 
@@ -25,33 +26,29 @@ function parseJwt(token) {
   }
 }
 
-// Custom Sidebar for Manager Dashboard
-function ManagerSidebar({ active }) {
+// Manager Navigation Content
+function ManagerNavigation({ active }) {
   return (
-    <aside className="sidebar">
-      <div className="sidebar-logo">PayFlow Manager</div>
-      <nav>
-        <ul>
-          <li className={active === 'dashboard' ? 'active' : ''}>
-            <a href="/manager-dashboard">🏠 Dashboard</a>
-          </li>
-          <li className={active === 'employees' ? 'active' : ''}>
-            <a href="/manager-employees">👥 Employees</a>
-          </li>
-          <li className={active === 'onboarding' ? 'active' : ''}>
-            <a href="/manager-onboarding">📝 Onboarding</a>
-          </li>
-          <li className={active === 'leave-requests' ? 'active' : ''}>
-            <a href="/manager-leave-requests">📅 Leave Requests</a>
-          </li>
-        </ul>
-      </nav>
-    </aside>
+    <ul>
+      <li className={active === 'dashboard' ? 'active' : ''}>
+        <a href="/manager-dashboard">🏠 Dashboard</a>
+      </li>
+      <li className={active === 'employees' ? 'active' : ''}>
+        <a href="/manager-employees">👥 Employees</a>
+      </li>
+      <li className={active === 'onboarding' ? 'active' : ''}>
+        <a href="/manager-onboarding">📝 Onboarding</a>
+      </li>
+      <li className={active === 'leave-requests' ? 'active' : ''}>
+        <a href="/manager-leave-requests">📅 Leave Requests</a>
+      </li>
+    </ul>
   );
 }
 export default function ManagerDashboard() {
   const [user, setUser] = useState({ name: 'Manager Name' });
   const navigate = useNavigate();
+  const sidebarRef = useRef(null);
   const [stats, setStats] = useState({ TOTAL: 0, ACTIVE: 0, INACTIVE: 0, RECENT: 0 });
   const [loading, setLoading] = useState(true);
   const [employees, setEmployees] = useState([]);
@@ -64,7 +61,7 @@ export default function ManagerDashboard() {
 
   useEffect(() => {
     // Extract user info from JWT token
-    const token = localStorage.getItem('jwtToken');
+    const token = sessionStorage.getItem('jwtToken');
     if (token) {
       const payload = parseJwt(token);
       setUser({ name: payload.sub || payload.username || 'User' });
@@ -73,7 +70,7 @@ export default function ManagerDashboard() {
     async function fetchStatsAndData() {
       try {
         setLoading(true);
-        const token = localStorage.getItem('jwtToken');
+        const token = sessionStorage.getItem('jwtToken');
         
         // Fetch basic statistics and employees first
         const [totalEmpRes, activeEmpRes, inactiveEmpRes, employeesRes] = await Promise.all([
@@ -144,130 +141,121 @@ export default function ManagerDashboard() {
   }, []);
 
   const handleLogout = () => {
-    localStorage.removeItem('jwtToken');
+    sessionStorage.removeItem('jwtToken');
     navigate('/');
   };
 
   return (
     <div className="dashboard-layout">
-      <ManagerSidebar active="dashboard" />
+      <CollapsibleSidebar ref={sidebarRef} logo="PayFlow Manager">
+        <ManagerNavigation active="dashboard" />
+      </CollapsibleSidebar>
       <div className="main-content">
         <Topbar
           title="Manager Dashboard"
           user={user}
           onLogout={handleLogout}
+          sidebarRef={sidebarRef}
         />
-        <div className="dashboard-home">
-          {/* Summary Cards */}
-          <div className="summary-cards-row">
-            <SummaryCard 
-              title="Total Employees" 
-              value={loading ? '...' : stats.TOTAL} 
-              actionable 
-              onClick={() => navigate('/hr-employees')} 
-            />
-            <SummaryCard 
-              title="Active Employees" 
-              value={loading ? '...' : stats.ACTIVE} 
-              actionable 
-              onClick={() => navigate('/hr-employees')} 
-            />
-            <SummaryCard 
-              title="Pending Leaves" 
-              value={loading ? '...' : leaveStats.PENDING} 
-              actionable 
-              onClick={() => navigate('/manager-leave-requests')} 
-            />
-            <SummaryCard 
-              title="Recently Onboarded" 
-              value={loading ? '...' : stats.RECENT} 
-              actionable 
-              onClick={() => navigate('/hr-employees')} 
-            />
+        <div className="p-6">
+          {/* Welcome Section */}
+          <div className="mb-8">
+            <h1 className="text-3xl font-bold mb-2">👋 Welcome, Manager!</h1>
+            <p className="text-gray-600">Here's your team overview and pending actions.</p>
           </div>
-          
-          {/* Leave Request Quick Actions */}
-          <div className="dashboard-widgets-row">
-            <MiniCalendar events={events} />
-            <div className="leave-quick-actions">
-              <h3>Leave Management</h3>
-              <div className="leave-action-buttons">
-                <button 
-                  className="action-btn pending" 
-                  onClick={() => navigate('/manager-leave-requests?status=PENDING')}
-                >
-                  Pending Requests ({leaveStats.PENDING || 0})
-                </button>
-                <button 
-                  className="action-btn approved" 
-                  onClick={() => navigate('/manager-leave-requests?status=APPROVED')}
-                >
-                  Approved ({leaveStats.APPROVED || 0})
-                </button>
-                <button 
-                  className="action-btn rejected" 
-                  onClick={() => navigate('/manager-leave-requests?status=REJECTED')}
-                >
-                  Rejected ({leaveStats.REJECTED || 0})
-                </button>
+
+          {/* Summary Cards */}
+          <div className="mb-8">
+            <div className="summary-cards-container">
+              <div className="summary-cards-grid">
+                <SummaryCard 
+                  title="Total Employees" 
+                  value={loading ? '...' : stats.TOTAL} 
+                  actionable 
+                  onClick={() => navigate('/hr-employees')} 
+                />
+                <SummaryCard 
+                  title="Active Employees" 
+                  value={loading ? '...' : stats.ACTIVE} 
+                  actionable 
+                  onClick={() => navigate('/hr-employees')} 
+                />
+                <SummaryCard 
+                  title="Pending Leaves" 
+                  value={loading ? '...' : leaveStats.PENDING} 
+                  actionable 
+                  onClick={() => navigate('/manager-leave-requests')} 
+                />
+                <SummaryCard 
+                  title="Recently Onboarded" 
+                  value={loading ? '...' : stats.RECENT} 
+                  actionable 
+                  onClick={() => navigate('/hr-employees')} 
+                />
               </div>
             </div>
           </div>
-          <div className="quick-action-card" onClick={() => navigate('/manager-employees')}>
-  <div className="action-icon">👥</div>
-  <h3>My Team</h3>
-  <p>View and manage your team members</p>
-</div>
+          
+          {/* Dashboard Widgets */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+            <MiniCalendar events={events} />
+            
+            {/* Leave Management Card */}
+            <div className="card">
+              <div className="card-content">
+                <h3 className="font-semibold mb-4">Leave Management</h3>
+                <div className="flex flex-col gap-3">
+                  <button 
+                    className="btn btn-warning flex justify-between items-center" 
+                    onClick={() => navigate('/manager-leave-requests?status=PENDING')}
+                  >
+                    <span>Pending Requests</span>
+                    <span className="badge badge-neutral">{leaveStats.PENDING || 0}</span>
+                  </button>
+                  <button 
+                    className="btn btn-success flex justify-between items-center" 
+                    onClick={() => navigate('/manager-leave-requests?status=APPROVED')}
+                  >
+                    <span>Approved</span>
+                    <span className="badge badge-neutral">{leaveStats.APPROVED || 0}</span>
+                  </button>
+                  <button 
+                    className="btn btn-error flex justify-between items-center" 
+                    onClick={() => navigate('/manager-leave-requests?status=REJECTED')}
+                  >
+                    <span>Rejected</span>
+                    <span className="badge badge-neutral">{leaveStats.REJECTED || 0}</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
 
-<div className="quick-action-card" onClick={() => navigate('/manager-onboarding')}>
-  <div className="action-icon">📝</div>
-  <h3>Add Team Member</h3>
-  <p>Onboard new employees to your team</p>
-</div>
-          <h3 style={{marginTop: '2rem'}}>My Team Members</h3>
-          <div className="table-container">
-            <table className="onboard-table">
-              <thead>
-                <tr>
-                  <th>Name</th>
-                  <th>Age</th>
-                  <th>Email</th>
-                  <th>Total Experience</th>
-                  <th>Date Joined</th>
-                  <th>Status</th>
-                  <th>Created By</th>
-                </tr>
-              </thead>
-              <tbody>
-                {loading ? (
-                  <tr>
-                    <td colSpan="7" style={{textAlign: 'center', padding: '2rem'}}>Loading employees...</td>
-                  </tr>
-                ) : employees.length === 0 ? (
-                  <tr>
-                    <td colSpan="7" style={{textAlign: 'center', padding: '2rem'}}>No team members found</td>
-                  </tr>
-                ) : (
-                  employees.map(emp => (
-                    <tr key={emp.id}>
-                      <td>{emp.fullName}</td>
-                      <td>{emp.age}</td>
-                      <td>{emp.email}</td>
-                      <td>{emp.totalExperience || 'N/A'}</td>
-                      <td>
-                        {emp.createdAt ? new Date(emp.createdAt).toLocaleDateString() : 'N/A'}
-                      </td>
-                      <td>
-                        <span className={`status-badge ${emp.status?.toLowerCase()}`}>
-                          {emp.status}
-                        </span>
-                      </td>
-                      <td>{emp.createdBy || '-'}</td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
+          {/* Quick Actions */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="card cursor-pointer" onClick={() => navigate('/manager-employees')}>
+              <div className="card-content text-center">
+                <div className="text-4xl mb-4">👥</div>
+                <h3 className="font-semibold mb-2">My Team</h3>
+                <p className="text-gray-600">View and manage your team members</p>
+              </div>
+            </div>
+
+            <div className="card cursor-pointer" onClick={() => navigate('/manager-onboarding')}>
+              <div className="card-content text-center">
+                <div className="text-4xl mb-4">📝</div>
+                <h3 className="font-semibold mb-2">Onboarding</h3>
+                <p className="text-gray-600">Onboard new team members</p>
+              </div>
+            </div>
+
+            <div className="card cursor-pointer" onClick={() => navigate('/manager-leave-requests')}>
+              <div className="card-content text-center">
+                <div className="text-4xl mb-4">📅</div>
+                <h3 className="font-semibold mb-2">Leave Requests</h3>
+                <p className="text-gray-600">Review and approve leave requests</p>
+              </div>
+            </div>
           </div>
         </div>
       </div>

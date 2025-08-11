@@ -38,9 +38,10 @@ export default function EmployeeLoginForm() {
         password,
       });
       const token = res.data.token;
-      localStorage.setItem('jwtToken', token);
+      sessionStorage.setItem('jwtToken', token);
       const payload = parseJwt(token);
-      navigate('/employee-dashboard', { state: { user: payload } });
+      // Redirect to unified PayFlow-AI interface for all authenticated employees
+      navigate('/payflow-ai/dashboard', { state: { user: payload } });
     } catch (err) {
       if (err.response && err.response.status === 400) {
         setError(err.response.data.message || 'Invalid email or password.');
@@ -55,37 +56,90 @@ export default function EmployeeLoginForm() {
   };
 
   return (
-    <div className="login-container">
-      <form className="login-form" onSubmit={handleSubmit}>
-        <h2 className="mb-4">Employee Login</h2>
-        {error && <div className="login-error">{error}</div>}
-        <div className="form-group">
-          <label>Email</label>
-          <input
-            type="email"
-            value={email}
-            onChange={e => setEmail(e.target.value)}
-            required
-            className="form-input"
-            placeholder="Enter your email"
-          />
+    <div 
+      className="flex items-center justify-center p-6" 
+      style={{ 
+        background: 'var(--bg-secondary)',
+        minHeight: '100vh',
+        height: '100vh'
+      }}
+    >
+      <div style={{ width: '400px' }}>
+        <div className="card" style={{ border: '1px solid var(--border-light)' }}>
+          <div className="card-content">
+            {/* Role Indicator */}
+            <div className="text-center mb-6">
+              <div className="badge badge-success mb-4">Employee Portal</div>
+              <h1 className="text-3xl font-bold mb-2" style={{ 
+                color: 'var(--primary-solid)'
+              }}>
+                PayFlow
+              </h1>
+              <p className="text-gray-600">Welcome! Please sign in to access your workspace.</p>
+            </div>
+
+            {error && (
+              <div className="mb-4 p-4 rounded-lg" style={{ 
+                background: '#fef2f2', 
+                border: '1px solid #fecaca',
+                borderRadius: 'var(--radius-lg)'
+              }}>
+                <p className="text-sm" style={{ color: 'var(--error)' }}>{error}</p>
+              </div>
+            )}
+
+            <form onSubmit={handleSubmit}>
+              <div className="form-group">
+                <label className="form-label">Email Address</label>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={e => setEmail(e.target.value)}
+                  required
+                  className="form-input"
+                  placeholder="Enter your email address"
+                />
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Password</label>
+                <input
+                  type="password"
+                  value={password}
+                  onChange={e => setPassword(e.target.value)}
+                  required
+                  className="form-input"
+                  placeholder="Enter your password"
+                />
+              </div>
+
+              <button 
+                type="submit" 
+                className="btn btn-primary w-full mb-4" 
+                disabled={loading}
+              >
+                {loading ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <span>⏳</span> Signing in...
+                  </span>
+                ) : (
+                  'Sign In'
+                )}
+              </button>
+
+              <div className="text-center">
+                <a 
+                  href="/" 
+                  className="text-sm font-medium"
+                  style={{ color: 'var(--primary-solid)' }}
+                >
+                  User Login →
+                </a>
+              </div>
+            </form>
+          </div>
         </div>
-        <div className="form-group">
-          <label>Password</label>
-          <input
-            type="password"
-            value={password}
-            onChange={e => setPassword(e.target.value)}
-            required
-            className="form-input"
-            placeholder="Enter your password"
-          />
-        </div>
-        <button type="submit" className="login-btn" disabled={loading}>
-          {loading ? 'Logging in...' : 'Login'}
-        </button>
-        <p><a href="/">Back to Login</a></p>
-      </form>
+      </div>
     </div>
   );
 }

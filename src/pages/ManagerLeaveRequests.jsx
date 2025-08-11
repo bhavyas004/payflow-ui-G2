@@ -51,7 +51,7 @@ export default function ManagerLeaveRequests() {
   const [remarks, setRemarks] = useState('');
 
   useEffect(() => {
-    const token = localStorage.getItem('jwtToken');
+    const token = sessionStorage.getItem('jwtToken');
     if (token) {
       const payload = parseJwt(token);
       setUser({ name: payload.sub || payload.username || 'Manager' });
@@ -63,7 +63,7 @@ export default function ManagerLeaveRequests() {
   const fetchLeaveRequests = async () => {
     try {
       setLoading(true);
-      const token = localStorage.getItem('jwtToken');
+      const token = sessionStorage.getItem('jwtToken');
       
       let url = '/payflowapi/leave-requests/manager/team';
       if (selectedStatus !== 'ALL') {
@@ -104,7 +104,7 @@ export default function ManagerLeaveRequests() {
 
   const handleLeaveAction = async () => {
     try {
-      const token = localStorage.getItem('jwtToken');
+      const token = sessionStorage.getItem('jwtToken');
       const { request, action } = actionModal;
       
       const endpoint = action === 'approve' 
@@ -125,7 +125,7 @@ export default function ManagerLeaveRequests() {
   };
 
   const handleLogout = () => {
-    localStorage.removeItem('jwtToken');
+    sessionStorage.removeItem('jwtToken');
     navigate('/');
   };
 

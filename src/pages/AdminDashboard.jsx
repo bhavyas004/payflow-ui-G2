@@ -1,9 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import Sidebar from '../components/Sidebar';
+import Topbar from '../components/Topbar';
 import SummaryCard from '../components/SummaryCard';
-// Add this import at the top
+import CollapsibleSidebar from '../components/CollapsibleSidebar';
+import UserManagement from '../components/UserManagement';
 import PayrollManagement from './AdminPayrollManagement';
+import SimpleUnifiedPayrollManagement from '../components/SimpleUnifiedPayrollManagement';
 import '../styles/App.css';
 import axios from 'axios';
 
@@ -25,155 +27,6 @@ function parseJwt(token) {
   }
 }
 
-// Enhanced UserManagement component with pagination
-function UserManagement() {
-  const [users, setUsers] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState('');
-  const [roleFilter, setRoleFilter] = useState('');
-  const [currentPage, setCurrentPage] = useState(1);
-  const rowsPerPage = 5;
-
-  useEffect(() => {
-    fetchUsers();
-  }, []);
-
-  const fetchUsers = async () => {
-    try {
-      setLoading(true);
-      const token = localStorage.getItem('jwtToken');
-      const response = await axios.get('/payflowapi/user/hr-managers', {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      });
-      setUsers(response.data);
-    } catch (error) {
-      console.error('Error fetching users:', error);
-      setUsers([]);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const filtered = users.filter(user =>
-    (user.username?.toLowerCase().includes(search.toLowerCase()) ||
-      user.email?.toLowerCase().includes(search.toLowerCase())) &&
-    (roleFilter ? user.role === roleFilter : true)
-  );
-
-  // Pagination logic
-  const totalPages = Math.ceil(filtered.length / rowsPerPage);
-  const indexOfLastRow = currentPage * rowsPerPage;
-  const indexOfFirstRow = indexOfLastRow - rowsPerPage;
-  const currentRows = filtered.slice(indexOfFirstRow, indexOfLastRow);
-
-  const handlePageChange = (page) => {
-    if (page < 1 || page > totalPages) return;
-    setCurrentPage(page);
-  };
-
-  // Reset to first page if filter/search changes and current page is out of range
-  useEffect(() => {
-    if (currentPage > totalPages) setCurrentPage(1);
-  }, [filtered.length, totalPages, currentPage]);
-
-  return (
-    <div>
-      <div style={{ marginBottom: '1rem', display: 'flex', gap: '1rem', alignItems: 'center', flexWrap: 'wrap' }}>
-        <input
-          type="text"
-          placeholder="Search by name or email"
-          style={{ padding: '0.5rem', border: '1px solid #ccc', borderRadius: '4px', minWidth: '200px' }}
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-        />
-        <select
-          style={{ padding: '0.5rem', border: '1px solid #ccc', borderRadius: '4px' }}
-          value={roleFilter}
-          onChange={e => setRoleFilter(e.target.value)}
-        >
-          <option value="">All Roles</option>
-          <option value="HR">HR</option>
-          <option value="MANAGER">Manager</option>
-        </select>
-        <div style={{ marginLeft: 'auto', fontSize: '0.9rem', color: '#666' }}>
-          Showing {filtered.length} of {users.length} users
-        </div>
-      </div>
-      <div className="table-container">
-        <table className="onboard-table">
-          <thead>
-            <tr>
-              <th>Name</th>
-              <th>Role</th>
-              <th>Email</th>
-              <th>Contact</th>
-            </tr>
-          </thead>
-          <tbody>
-            {loading ? (
-              <tr>
-                <td colSpan={4} style={{textAlign: 'center', padding: '2rem'}}>Loading users...</td>
-              </tr>
-            ) : currentRows.length === 0 ? (
-              <tr>
-                <td colSpan={4} style={{textAlign: 'center', padding: '2rem'}}>No users found.</td>
-              </tr>
-            ) : (
-              currentRows.map((user, index) => (
-                <tr key={user.id || index}>
-                  <td>{user.username}</td>
-                  <td>
-                    <span className={`status-badge ${user.role?.toLowerCase()}`}>
-                      {user.role}
-                    </span>
-                  </td>
-                  <td>{user.email || 'N/A'}</td>
-                  <td>{user.contactNumber || 'N/A'}</td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-        {/* Pagination Controls */}
-        <div className="pagination-controls" style={{marginTop: '1rem', display: 'flex', justifyContent: 'center', gap: '0.5rem'}}>
-          <button
-            onClick={() => handlePageChange(currentPage - 1)}
-            disabled={currentPage === 1}
-            style={{padding: '0.3rem 0.8rem', borderRadius: '4px', border: '1px solid #ccc', background: currentPage === 1 ? '#eee' : '#fff'}}
-          >
-            Prev
-          </button>
-          {[...Array(totalPages)].map((_, i) => (
-            <button
-              key={i}
-              onClick={() => handlePageChange(i + 1)}
-              style={{
-                padding: '0.3rem 0.8rem',
-                borderRadius: '4px',
-                border: '1px solid #2563eb',
-                background: currentPage === i + 1 ? '#2563eb' : '#fff',
-                color: currentPage === i + 1 ? '#fff' : '#2563eb',
-                fontWeight: currentPage === i + 1 ? 700 : 400
-              }}
-            >
-              {i + 1}
-            </button>
-          ))}
-          <button
-            onClick={() => handlePageChange(currentPage + 1)}
-            disabled={currentPage === totalPages}
-            style={{padding: '0.3rem 0.8rem', borderRadius: '4px', border: '1px solid #ccc', background: currentPage === totalPages ? '#eee' : '#fff'}}
-          >
-            Next
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 // Live clock widget
 function LiveClock() {
   const [time, setTime] = useState(new Date());
@@ -189,9 +42,44 @@ function ProfileAvatar() {
   return <img src="https://ui-avatars.com/api/?name=Admin" alt="Profile" className="profile-avatar" />;
 }
 
+// Admin Navigation Component
+function AdminNavigation({ active, onNavigate, onLogout, useUnifiedUI, onToggleUI }) {
+  return (
+    <ul>
+      <li className={active === 'dashboard' ? 'active' : ''}>
+        <a href="#" onClick={(e) => {e.preventDefault(); onNavigate('dashboard')}}>🏠 Dashboard</a>
+      </li>
+      <li className={active === 'users' ? 'active' : ''}>
+        <a href="#" onClick={(e) => {e.preventDefault(); onNavigate('users')}}>👥 Users</a>
+      </li>
+      <li className={active === 'payroll' ? 'active' : ''}>
+        <a href="#" onClick={(e) => {e.preventDefault(); onNavigate('payroll')}}>💰 Payroll</a>
+      </li>
+      <li className="ui-toggle">
+        <div style={{ padding: '0.5rem', borderTop: '1px solid #e2e8f0', marginTop: '1rem' }}>
+          <label style={{ fontSize: '0.75rem', color: '#64748b', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <input 
+              type="checkbox" 
+              checked={useUnifiedUI} 
+              onChange={onToggleUI}
+              style={{ margin: 0 }}
+            />
+            🆕 Use New UI
+          </label>
+        </div>
+      </li>
+      <li>
+        <button className="btn btn-ghost btn-sm w-full" onClick={onLogout}>🚪 Logout</button>
+      </li>
+    </ul>
+  );
+}
+
 export default function AdminDashboard() {
   const [user, setUser] = useState({ name: '' });
+  const sidebarRef = useRef(null);
   const [currentView, setCurrentView] = useState('dashboard'); // 'dashboard', 'users', or 'payroll'
+  const [useUnifiedUI, setUseUnifiedUI] = useState(true); // Toggle between old and new UI
   const [summary, setSummary] = useState({
     totalUsers: 0,
     totalHRs: 0,
@@ -215,7 +103,7 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     // Extract user info from JWT token
-    const token = localStorage.getItem('jwtToken');
+    const token = sessionStorage.getItem('jwtToken');
     if (token) {
       const payload = parseJwt(token);
       setUser({ name: payload.sub || payload.username || 'User' });
@@ -225,7 +113,7 @@ export default function AdminDashboard() {
 
   const fetchStatistics = async () => {
     try {
-      const token = localStorage.getItem('jwtToken');
+      const token = sessionStorage.getItem('jwtToken');
       const [userCountsRes, totalUsersRes] = await Promise.all([
         axios.get('/payflowapi/user/counts', {
           headers: { Authorization: `Bearer ${token}` }
@@ -258,7 +146,7 @@ export default function AdminDashboard() {
     setFormSuccess('');
     setFormLoading(true);
     try {
-      const token = localStorage.getItem('jwtToken');
+      const token = sessionStorage.getItem('jwtToken');
       await axios.post('/payflowapi/user/admin/create', formData, {
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -282,106 +170,162 @@ export default function AdminDashboard() {
 
   // Handle logout
   const handleLogout = () => {
-    localStorage.removeItem('jwtToken');
+    sessionStorage.removeItem('jwtToken');
     navigate('/');
   };
 
   return (
-    <div className="dashboard-layout admin-dashboard">
-      <aside className="sidebar admin-sidebar">
-        <div className="sidebar-logo">PayFlow</div>
-        <nav>
-          <ul>
-            <li className={currentView === 'dashboard' ? 'active' : ''}><a href="#" onClick={(e) => {e.preventDefault(); setCurrentView('dashboard')}}>🏠 Dashboard</a></li>
-            <li className={currentView === 'users' ? 'active' : ''}><a href="#" onClick={(e) => {e.preventDefault(); setCurrentView('users')}}>👥 Users</a></li>
-            <li className={currentView === 'payroll' ? 'active' : ''}><a href="#" onClick={(e) => {e.preventDefault(); setCurrentView('payroll')}}>💰 Payroll</a></li>
-            <li><button className="logout-btn" onClick={handleLogout}>🚪 Logout</button></li>
-          </ul>
-        </nav>
-      </aside>
-      <div className="main-content admin-main-content">
+    <div className="dashboard-layout">
+      <CollapsibleSidebar ref={sidebarRef} logo="PayFlow Admin">
+        <AdminNavigation 
+          active={currentView} 
+          onNavigate={setCurrentView}
+          onLogout={handleLogout}
+          useUnifiedUI={useUnifiedUI}
+          onToggleUI={() => setUseUnifiedUI(!useUnifiedUI)}
+        />
+      </CollapsibleSidebar>
+      <div className="main-content">
+        <Topbar
+          title="Admin Dashboard"
+          user={user}
+          onLogout={handleLogout}
+          sidebarRef={sidebarRef}
+        />
         {currentView === 'payroll' ? (
-          <div style={{ padding: '20px' }}>
-            <h2 style={{ marginBottom: '20px' }}>Payroll Management</h2>
-            <PayrollManagement />
+          <div className="p-6">
+            <div style={{ 
+              display: 'flex', 
+              justifyContent: 'space-between', 
+              alignItems: 'center', 
+              marginBottom: '1.5rem',
+              padding: '1rem',
+              background: useUnifiedUI ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' : '#f8fafc',
+              color: useUnifiedUI ? 'white' : 'inherit',
+              borderRadius: '0.5rem'
+            }}>
+              <h2 className="text-2xl font-bold">
+                {useUnifiedUI ? '🚀 Unified Payroll Management' : 'Payroll Management'}
+              </h2>
+              {useUnifiedUI && (
+                <span style={{ fontSize: '0.875rem' }}>
+                  ✨ New Enhanced Interface
+                </span>
+              )}
+            </div>
+            {useUnifiedUI ? (
+              <SimpleUnifiedPayrollManagement />
+            ) : (
+              <PayrollManagement />
+            )}
           </div>
         ) : currentView === 'users' ? (
-          <div style={{ padding: '20px' }}>
-            <h2 style={{ marginBottom: '20px' }}>Users (HR & Managers)</h2>
+          <div className="p-6">
+            <h2 className="text-2xl font-bold mb-6">Users (HR & Managers)</h2>
             <UserManagement />
           </div>
         ) : (
-          <>
-            {/* Header */}
-            <div className="admin-header-row">
-              <div className="welcome-message">👋 Welcome, {user.name}!</div>
-              <div className="header-right">
+          <div className="p-6">
+            {/* Welcome Section */}
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-8">
+              <div>
+                <h1 className="text-3xl font-bold mb-2">👋 Welcome, {user.name}!</h1>
+                <p className="text-gray-600">System administration and overview.</p>
+              </div>
+              <div className="flex items-center gap-4 mt-4 md:mt-0">
                 <LiveClock />
                 <ProfileAvatar />
               </div>
             </div>
-            {/* Info Cards */}
-            <div className="summary-cards-grid admin-cards-grid">
-              <SummaryCard title="Total Users" value={summary.totalUsers} />
-              <SummaryCard title="Total HRs" value={summary.totalHRs} />
-              <SummaryCard title="Total Managers" value={summary.totalManagers} />
-              <SummaryCard title="Current Date" value={summary.currentDate} />
+
+            {/* Summary Cards */}
+            <div className="mb-8">
+              <div className="summary-cards-container">
+                <div className="summary-cards-grid">
+                  <SummaryCard title="Total Users" value={summary.totalUsers} />
+                  <SummaryCard title="Total HRs" value={summary.totalHRs} />
+                  <SummaryCard title="Total Managers" value={summary.totalManagers} />
+                  <SummaryCard title="Current Date" value={summary.currentDate} />
+                </div>
+              </div>
             </div>
+
             {/* Create New User Button */}
-            <div className="admin-actions-row">
-              <button className="create-user-btn" onClick={() => setShowCreateModal(true)}>
+            <div className="flex justify-end mb-6">
+              <button 
+                className="btn btn-primary"
+                onClick={() => setShowCreateModal(true)}
+              >
                 🔐 Create New User (HR/Manager)
               </button>
             </div>
-          </>
+          </div>
         )}
         
         {/* Create User Modal */}
         {showCreateModal && (
-          <div className="modal-backdrop">
-            <div className="modal">
-              <h3 className="mb-3">Create New User (HR/Manager)</h3>
-              <form onSubmit={handleFormSubmit} className="create-user-form">
-                {/* Show field-specific errors */}
-                {Object.values(formFieldErrors).length > 0 && (
-                  <div className="login-error mb-2">
-                    {Object.entries(formFieldErrors).map(([field, msg]) => (
-                      <div key={field}>{msg}</div>
-                    ))}
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-modal">
+            <div className="card w-full max-w-md">
+              <div className="card-content">
+                <h3 className="text-xl font-semibold mb-6">Create New User (HR/Manager)</h3>
+                <form onSubmit={handleFormSubmit} className="space-y-4">
+                  {/* Show field-specific errors */}
+                  {Object.values(formFieldErrors).length > 0 && (
+                    <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
+                      {Object.entries(formFieldErrors).map(([field, msg]) => (
+                        <div key={field} className="text-red-800 text-sm">{msg}</div>
+                      ))}
+                    </div>
+                  )}
+                  {formError && (
+                    <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
+                      <p className="text-red-800 text-sm">{formError}</p>
+                    </div>
+                  )}
+                  {formSuccess && (
+                    <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+                      <p className="text-green-800 text-sm">{formSuccess}</p>
+                    </div>
+                  )}
+                  
+                  <div className="form-group">
+                    <label className="form-label">Role</label>
+                    <select name="role" value={formData.role} onChange={handleFormChange} className="form-select">
+                      <option value="HR">HR</option>
+                      <option value="MANAGER">Manager</option>
+                    </select>
                   </div>
-                )}
-                {formError && <div className="login-error mb-2">{formError}</div>}
-                {formSuccess && <div className="success-message mb-2">{formSuccess}</div>}
-                <div className="form-group">
-                  <label>Role</label>
-                  <select name="role" value={formData.role} onChange={handleFormChange} className="form-input">
-                    <option value="HR">HR</option>
-                    <option value="MANAGER">Manager</option>
-                  </select>
-                </div>
-                <div className="form-group">
-                  <label>Username</label>
-                  <input name="username" type="text" value={formData.username} onChange={handleFormChange} required className="form-input" />
-                </div>
-                <div className="form-group">
-                  <label>Email</label>
-                  <input name="email" type="email" value={formData.email} onChange={handleFormChange} required className="form-input" />
-                </div>
-                <div className="form-group">
-                  <label>Contact Number</label>
-                  <input name="contactNumber" type="text" value={formData.contactNumber} onChange={handleFormChange} required className="form-input" />
-                </div>
-                <div className="form-group">
-                  <label>Password</label>
-                  <input name="password" type="password" value={formData.password} onChange={handleFormChange} required className="form-input" />
-                </div>
-                <button type="submit" className="login-btn" disabled={formLoading}>
-                  {formLoading ? 'Creating...' : 'Create User'}
-                </button>
-                <button type="button" className="login-btn" style={{marginTop: '10px', backgroundColor: '#f44336'}} onClick={() => setShowCreateModal(false)}>
-                  Cancel
-                </button>
-              </form>
+                  
+                  <div className="form-group">
+                    <label className="form-label">Username</label>
+                    <input name="username" type="text" value={formData.username} onChange={handleFormChange} required className="form-input" />
+                  </div>
+                  
+                  <div className="form-group">
+                    <label className="form-label">Email</label>
+                    <input name="email" type="email" value={formData.email} onChange={handleFormChange} required className="form-input" />
+                  </div>
+                  
+                  <div className="form-group">
+                    <label className="form-label">Contact Number</label>
+                    <input name="contactNumber" type="text" value={formData.contactNumber} onChange={handleFormChange} required className="form-input" />
+                  </div>
+                  
+                  <div className="form-group">
+                    <label className="form-label">Password</label>
+                    <input name="password" type="password" value={formData.password} onChange={handleFormChange} required className="form-input" />
+                  </div>
+                  
+                  <div className="flex gap-3 pt-4">
+                    <button type="submit" className="btn btn-primary flex-1" disabled={formLoading}>
+                      {formLoading ? 'Creating...' : 'Create User'}
+                    </button>
+                    <button type="button" className="btn btn-ghost flex-1" onClick={() => setShowCreateModal(false)}>
+                      Cancel
+                    </button>
+                  </div>
+                </form>
+              </div>
             </div>
           </div>
         )}

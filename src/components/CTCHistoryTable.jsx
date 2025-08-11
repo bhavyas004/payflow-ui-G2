@@ -25,12 +25,12 @@ export default function CTCHistoryTable({ ctcHistory, onEdit }) {
         </thead>
         <tbody>
           {ctcHistory.map((ctc, index) => (
-            <tr key={ctc.ctcId || index}>
-              <td>{new Date(ctc.effectiveFrom).toLocaleDateString()}</td>
-              <td>₹{ctc.basicSalary?.toLocaleString()}</td>
-              <td>₹{ctc.hra?.toLocaleString()}</td>
-              <td>₹{ctc.allowances?.toLocaleString()}</td>
-              <td className="total-ctc">₹{ctc.totalCtc?.toLocaleString()}</td>
+            <tr key={ctc.ctcId || ctc.id || index}>
+              <td>{new Date(ctc.effectiveFrom || ctc.effectiveDate || ctc.createdAt).toLocaleDateString()}</td>
+              <td>₹{(ctc.basicSalary || 0).toLocaleString()}</td>
+              <td>₹{(ctc.hra || 0).toLocaleString()}</td>
+              <td>₹{(ctc.allowances || 0).toLocaleString()}</td>
+              <td className="total-ctc">₹{(ctc.totalCtc || ctc.totalCTC || 0).toLocaleString()}</td>
               <td>{new Date(ctc.createdAt).toLocaleDateString()}</td>
               <td>
                 <button 

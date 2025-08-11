@@ -60,7 +60,7 @@ function EmployeeSidebar({ active, role, onBack, fromDashboard }) {
 }
 
 export default function EmployeeManagement() {
-  const token = localStorage.getItem('jwtToken');
+  const token = sessionStorage.getItem('jwtToken');
   const payload = parseJwt(token);
   const userRole = (payload.role || 'HR').toUpperCase();
   const userName = payload.username || 'User';
@@ -133,7 +133,7 @@ export default function EmployeeManagement() {
     setFormSuccess('');
     setFormLoading(true);
     try {
-      const token = localStorage.getItem('jwtToken');
+      const token = sessionStorage.getItem('jwtToken');
       await axios.post('/payflowapi/user/admin/create', formData, {
         headers: { Authorization: `Bearer ${token}` }
       });

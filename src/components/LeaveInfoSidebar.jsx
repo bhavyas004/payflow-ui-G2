@@ -36,7 +36,7 @@ const LeaveInfoSidebar = ({ isOpen, onClose }) => {
     try {
       setLoading(true);
       setError('');
-      const token = localStorage.getItem('jwtToken');
+      const token = sessionStorage.getItem('jwtToken');
       const payload = parseJwt(token);
       const employeeId = payload.employeeId;
 

@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Topbar from '../components/Topbar';
 import SummaryCard from '../components/SummaryCard';
 import QuickActions from '../components/QuickActions';
 import MiniCalendar from '../components/MiniCalendar';
+import CollapsibleSidebar from '../components/CollapsibleSidebar';
 import axios from 'axios';
 import '../styles/App.css';
 import '../styles/Payroll.css'
@@ -27,40 +28,36 @@ function parseJwt(token) {
 }
 
 
-function HRSidebar({ active }) {
+function HRNavigation({ active }) {
   return (
-    <aside className="sidebar">
-      <div className="sidebar-logo">PayFlow</div>
-      <nav>
-        <ul>
-          <li className={active === 'dashboard' ? 'active' : ''}>
-            <a href="/hr-dashboard">🏠 Dashboard</a>
-          </li>
-          <li className={active === 'employees' ? 'active' : ''}>
-            <a href="/hr-employees">👥 Employees</a>
-          </li>
-          <li className={active === 'onboarding' ? 'active' : ''}>
-            <a href="/onboarding">📝 Onboarding</a>
-          </li>
-          {/* New Payroll Menu Items */}
-          <li className={active === 'payroll' ? 'active' : ''}>
-            <a href="/hr-payroll">💰 Payroll</a>
-          </li>
-          <li className={active === 'ctc' ? 'active' : ''}>
-            <a href="/ctc-management">📊 CTC Management</a>
-          </li>
-          <li className={active === 'payslips' ? 'active' : ''}>
-            <a href="/payslip-view">📄 Payslips</a>
-          </li>
-        </ul>
-      </nav>
-    </aside>
+    <ul>
+      <li className={active === 'dashboard' ? 'active' : ''}>
+        <a href="/hr-dashboard">🏠 Dashboard</a>
+      </li>
+      <li className={active === 'employees' ? 'active' : ''}>
+        <a href="/hr-employees">👥 Employees</a>
+      </li>
+      <li className={active === 'onboarding' ? 'active' : ''}>
+        <a href="/onboarding">📝 Onboarding</a>
+      </li>
+      {/* New Payroll Menu Items */}
+      <li className={active === 'payroll' ? 'active' : ''}>
+        <a href="/hr-payroll">💰 Payroll</a>
+      </li>
+      <li className={active === 'ctc' ? 'active' : ''}>
+        <a href="/ctc-management">📊 CTC Management</a>
+      </li>
+      <li className={active === 'payslips' ? 'active' : ''}>
+        <a href="/payslip-view">📄 Payslips</a>
+      </li>
+    </ul>
   );
 }
 
 export default function HRDashboard() {
   const [user, setUser] = useState({ name: 'HR Name' });
   const navigate = useNavigate();
+  const sidebarRef = useRef(null);
   const [stats, setStats] = useState({ TOTAL: 0, ACTIVE: 0, INACTIVE: 0, RECENT: 0 });
   const [loading, setLoading] = useState(true);
   const [events] = useState([
@@ -71,7 +68,7 @@ export default function HRDashboard() {
 
   useEffect(() => {
     // Extract user info from JWT token
-    const token = localStorage.getItem('jwtToken');
+    const token = sessionStorage.getItem('jwtToken');
     if (token) {
       const payload = parseJwt(token);
       setUser({ name: payload.sub || payload.username || 'User' });
@@ -80,7 +77,7 @@ export default function HRDashboard() {
     async function fetchStatsAndData() {
       try {
         setLoading(true);
-        const token = localStorage.getItem('jwtToken');
+        const token = sessionStorage.getItem('jwtToken');
         
         // Fetch statistics from the same endpoints as Manager Dashboard
         const [totalEmpRes, activeEmpRes, inactiveEmpRes, employeesRes] = await Promise.all([
@@ -134,45 +131,60 @@ export default function HRDashboard() {
 
   return (
     <div className="dashboard-layout">
-      <HRSidebar active="dashboard" />
+      <CollapsibleSidebar ref={sidebarRef} logo="PayFlow">
+        <HRNavigation active="dashboard" />
+      </CollapsibleSidebar>
       <div className="main-content">
         <Topbar
           title="HR Dashboard"
           user={user}
           onLogout={() => {
-            localStorage.removeItem('jwtToken');
+            sessionStorage.removeItem('jwtToken');
             navigate('/');
           }}
+          sidebarRef={sidebarRef}
         />
-        <div className="dashboard-home">
-          {/* Summary Cards */}
-          <div className="summary-cards-row">
-            <SummaryCard 
-              title="Total Employees" 
-              value={loading ? '...' : stats.TOTAL} 
-              actionable 
-              onClick={() => navigate('/hr-employees')} 
-            />
-            <SummaryCard 
-              title="Active Employees" 
-              value={loading ? '...' : stats.ACTIVE} 
-              actionable 
-              onClick={() => navigate('/hr-employees')} 
-            />
-            <SummaryCard 
-              title="Inactive Employees" 
-              value={loading ? '...' : stats.INACTIVE} 
-              actionable 
-              onClick={() => navigate('/hr-employees')} 
-            />
-            <SummaryCard 
-              title="Recently Onboarded" 
-              value={loading ? '...' : stats.RECENT} 
-              actionable 
-              onClick={() => navigate('/hr-employees')} 
-            />
+        <div className="p-6">
+          {/* Welcome Section */}
+          <div className="mb-8">
+            <h1 className="text-3xl font-bold mb-2">👋 Welcome back!</h1>
+            <p className="text-gray-600">Here's what's happening with your team today.</p>
           </div>
-          <div className="dashboard-widgets-row">
+
+          {/* Summary Cards */}
+          <div className="mb-8">
+            <div className="summary-cards-container">
+              <div className="summary-cards-grid">
+                <SummaryCard 
+                  title="Total Employees" 
+                  value={loading ? '...' : stats.TOTAL} 
+                  actionable 
+                  onClick={() => navigate('/hr-employees')} 
+                />
+                <SummaryCard 
+                  title="Active Employees" 
+                  value={loading ? '...' : stats.ACTIVE} 
+                  actionable 
+                  onClick={() => navigate('/hr-employees')} 
+                />
+                <SummaryCard 
+                  title="Inactive Employees" 
+                  value={loading ? '...' : stats.INACTIVE} 
+                  actionable 
+                  onClick={() => navigate('/hr-employees')} 
+                />
+                <SummaryCard 
+                  title="Recently Onboarded" 
+                  value={loading ? '...' : stats.RECENT} 
+                  actionable 
+                  onClick={() => navigate('/hr-employees')} 
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Dashboard Widgets */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <MiniCalendar events={events} />
             <QuickActions
               onAddEmployee={() => navigate('/onboarding')}

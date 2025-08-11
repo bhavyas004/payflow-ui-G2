@@ -80,7 +80,7 @@ export default function HRPayroll() {
 
   useEffect(() => {
     // Extract user info from JWT token
-    const token = localStorage.getItem('jwtToken');
+    const token = sessionStorage.getItem('jwtToken');
     if (token) {
       const payload = parseJwt(token);
       setUser({ name: payload.sub || payload.username || 'HR User' });
@@ -92,19 +92,33 @@ export default function HRPayroll() {
   const fetchPayrollData = async () => {
     try {
       setLoading(true);
-      const token = localStorage.getItem('jwtToken');
+      const token = sessionStorage.getItem('jwtToken');
+      const headers = { Authorization: `Bearer ${token}` };
       
-      // Fetch payroll statistics
-      const response = await axios.get('/payflowapi/payroll/stats', {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      // Fetch payroll statistics using the correct API endpoint
+      const response = await axios.get('http://localhost:8080/payflowapi/payroll/payslips', { headers });
       
-      if (response.data.success) {
-        setPayrollStats(response.data.data);
+      if (response.data) {
+        const payslips = response.data.data || response.data || [];
+        const totalEmployees = payslips.length;
+        const totalPayroll = payslips.reduce((sum, payslip) => sum + (Number(payslip.netPay) || 0), 0);
+        const avgPayroll = totalEmployees > 0 ? totalPayroll / totalEmployees : 0;
+        
+        setPayrollStats({
+          totalEmployeesWithCTC: totalEmployees,
+          totalMonthlyPayroll: totalPayroll,
+          averageCTC: avgPayroll
+        });
       }
       
     } catch (error) {
       console.error('Error fetching payroll data:', error);
+      // Set default values on error
+      setPayrollStats({
+        totalEmployeesWithCTC: 0,
+        totalMonthlyPayroll: 0,
+        averageCTC: 0
+      });
     } finally {
       setLoading(false);
     }
@@ -112,11 +126,11 @@ export default function HRPayroll() {
 
   const handleGeneratePayslips = async () => {
     try {
-      const token = localStorage.getItem('jwtToken');
+      const token = sessionStorage.getItem('jwtToken');
       const currentMonth = new Date().toLocaleString('default', { month: 'long' }).toUpperCase();
       const currentYear = new Date().getFullYear();
 
-      await axios.post('/payflowapi/payroll/payslips/generate', {
+      await axios.post('http://localhost:8080/payflowapi/payroll/payslips/generate', {
         month: currentMonth,
         year: currentYear
       }, {
@@ -142,7 +156,7 @@ export default function HRPayroll() {
             <span>Welcome, {user.name}</span>
             <button 
               onClick={() => {
-                localStorage.removeItem('jwtToken');
+                sessionStorage.removeItem('jwtToken');
                 navigate('/');
               }}
               className="logout-btn"

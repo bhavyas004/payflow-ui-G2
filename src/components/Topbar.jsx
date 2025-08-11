@@ -1,10 +1,24 @@
 import React from 'react';
 import '../styles/App.css';
 
-const Topbar = ({ title, user, onLogout }) => {
+const Topbar = ({ title, user, onLogout, sidebarRef }) => {
+  const handleMenuToggle = () => {
+    if (sidebarRef && sidebarRef.current) {
+      sidebarRef.current.toggleSidebar();
+    }
+  };
+
   return (
     <header className="topbar">
       <div className="topbar-left">
+        {/* Hamburger Menu Button for Mobile */}
+        <button 
+          className="hamburger-menu-btn"
+          onClick={handleMenuToggle}
+          aria-label="Toggle navigation menu"
+        >
+          ☰
+        </button>
         <span className="topbar-logo">PayFlow</span>
         <span className="topbar-title">{title}</span>
       </div>
@@ -15,7 +29,9 @@ const Topbar = ({ title, user, onLogout }) => {
           <span>Profile ⬇️</span>
         </div>
         {onLogout && (
-          <button className="logout-btn topbar-logout-btn" onClick={onLogout}>🚪 Logout</button>
+          <button className="btn btn-ghost btn-sm" onClick={onLogout}>
+            🚪 Logout
+          </button>
         )}
       </div>
     </header>

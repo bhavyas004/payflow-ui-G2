@@ -38,23 +38,16 @@ export default function Login() {
         password,
       });
       const token = res.data.token;
-      localStorage.setItem('jwtToken', token);
+      sessionStorage.setItem('jwtToken', token);
       const payload = parseJwt(token);
       const role = payload.role?.toLowerCase();
       const firstLogin = payload.isFirstLogin;
       
-      if (firstLogin == true) {
+      if (firstLogin === true) {
         navigate('/reset-password', { state: { email: res.data.email || email } });
       } else {
-        if (role === 'admin') {
-          navigate('/admin-dashboard');
-        } else if (role === 'hr') {
-          navigate('/hr-dashboard');
-        } else if (role === 'manager') {
-          navigate('/manager-dashboard');
-        } else {
-          navigate('/dashboard');
-        }
+        // Redirect to unified PayFlow-AI interface for all authenticated users
+        navigate('/payflow-ai/dashboard');
       }
     } catch (err) {
       if (err.response && err.response.status === 401) {
@@ -70,40 +63,90 @@ export default function Login() {
   };
 
   return (
-    <div className="login-container">
-      <form className="login-form" onSubmit={handleSubmit}>
-        <h2 className="mb-4">Login</h2>
-        {error && <div className="login-error">{error}</div>}
-        <div className="form-group">
-          <label>Email</label>
-          <input
-            type="email"
-            value={email}
-            onChange={e => setEmail(e.target.value)}
-            required
-            className="form-input"
-            placeholder="Enter your email"
-          />
+    <div 
+      className="flex items-center justify-center p-6" 
+      style={{ 
+        background: 'var(--bg-secondary)',
+        minHeight: '100vh',
+        height: '100vh'
+      }}
+    >
+      <div style={{ width: '400px' }}>
+        <div className="card" style={{ border: '1px solid var(--border-light)' }}>
+          <div className="card-content">
+            {/* Role Indicator */}
+            <div className="text-center mb-6">
+              <div className="badge badge-info mb-4">User Portal</div>
+              <h1 className="text-3xl font-bold mb-2" style={{ 
+                color: 'var(--primary-solid)'
+              }}>
+                PayFlow
+              </h1>
+              <p className="text-gray-600">Welcome back! Please sign in to your account.</p>
+            </div>
+
+            {error && (
+              <div className="mb-4 p-4 rounded-lg" style={{ 
+                background: '#fef2f2', 
+                border: '1px solid #fecaca',
+                borderRadius: 'var(--radius-lg)'
+              }}>
+                <p className="text-sm" style={{ color: 'var(--error)' }}>{error}</p>
+              </div>
+            )}
+
+            <form onSubmit={handleSubmit}>
+              <div className="form-group">
+                <label className="form-label">Email Address</label>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={e => setEmail(e.target.value)}
+                  required
+                  className="form-input"
+                  placeholder="Enter your email address"
+                />
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Password</label>
+                <input
+                  type="password"
+                  value={password}
+                  onChange={e => setPassword(e.target.value)}
+                  required
+                  className="form-input"
+                  placeholder="Enter your password"
+                />
+              </div>
+
+              <button 
+                type="submit" 
+                className="btn btn-primary w-full mb-4" 
+                disabled={loading}
+              >
+                {loading ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <span>⏳</span> Signing in...
+                  </span>
+                ) : (
+                  'Sign In'
+                )}
+              </button>
+
+              <div className="text-center">
+                <a 
+                  href="/employee-login" 
+                  className="text-sm font-medium"
+                  style={{ color: 'var(--primary-solid)' }}
+                >
+                  Employee Login →
+                </a>
+              </div>
+            </form>
+          </div>
         </div>
-        <div className="form-group">
-          <label>Password</label>
-          <input
-            type="password"
-            value={password}
-            onChange={e => setPassword(e.target.value)}
-            required
-            className="form-input"
-            placeholder="Enter your password"
-          />
-        </div>
-        <button type="submit" className="login-btn" disabled={loading}>
-          {loading ? 'Logging in...' : 'Login'}
-        </button>
-        {/* <div className="login-footer">
-          <p> <a href="/reset-password">change password</a></p>
-        </div> */}
-        <p><a href="/employee-login">Employee Login?</a></p>
-      </form>
+      </div>
     </div>
   );
 }

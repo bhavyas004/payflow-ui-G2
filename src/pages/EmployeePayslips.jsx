@@ -22,7 +22,7 @@ export default function EmployeePayslips() {
     setShowGenerationForm(false);
 
     try {
-      const token = localStorage.getItem('jwtToken');
+      const token = sessionStorage.getItem('jwtToken');
       
       console.log('🚀 Received payload from form:', payload);
 
@@ -59,7 +59,7 @@ export default function EmployeePayslips() {
 
   const fetchPayslips = async () => {
     try {
-      const token = localStorage.getItem('jwtToken');
+      const token = sessionStorage.getItem('jwtToken');
       const response = await axios.get('/payflowapi/payslips', {
         headers: { Authorization: `Bearer ${token}` }
       });

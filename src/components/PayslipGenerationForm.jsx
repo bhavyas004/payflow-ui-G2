@@ -45,7 +45,7 @@ const PayslipGenerationForm = ({ isOpen, onClose, onGenerate, loading = false })
 
   const fetchEmployees = async () => {
     try {
-      const token = localStorage.getItem('jwtToken');
+      const token = sessionStorage.getItem('jwtToken');
       const response = await axios.get('/payflowapi/onboard-employee/employees', {
         headers: { Authorization: `Bearer ${token}` }
       });

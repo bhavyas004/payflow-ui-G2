@@ -22,7 +22,7 @@ const ManagerEmployeeOnboarding = () => {
 
   // Determine user role and fetch managers
   useEffect(() => {
-    const token = localStorage.getItem('jwtToken');
+    const token = sessionStorage.getItem('jwtToken');
     if (token) {
       try {
         const base64Url = token.split('.')[1];
@@ -46,7 +46,7 @@ const ManagerEmployeeOnboarding = () => {
   // Fetch available managers when component mounts
   const fetchManagers = async () => {
     try {
-      const token = localStorage.getItem('jwtToken');
+      const token = sessionStorage.getItem('jwtToken');
       console.log('Fetching managers with token:', token ? 'Token exists' : 'No token');
       
       const response = await axios.get('/payflowapi/managers/available', {
@@ -130,7 +130,7 @@ const ManagerEmployeeOnboarding = () => {
   const handleSubmit = async e => {
     e.preventDefault();
     try {
-      const token = localStorage.getItem('jwtToken');
+      const token = sessionStorage.getItem('jwtToken');
       // Prepare payload for backend
       const payload = {
         fullName: formData.full_name,

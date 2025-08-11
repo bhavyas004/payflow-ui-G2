@@ -27,7 +27,7 @@ function EmployeeSidebar({ active }) {
   const navigate = useNavigate();
   
   const handleLogout = () => {
-    localStorage.removeItem('jwtToken');
+    sessionStorage.removeItem('jwtToken');
     navigate('/employee-login');
   };
 
@@ -199,7 +199,7 @@ export default function EmployeePayroll() {
 
   useEffect(() => {
     // Extract user info from JWT token
-    const token = localStorage.getItem('jwtToken');
+    const token = sessionStorage.getItem('jwtToken');
     if (token) {
       const payload = parseJwt(token);
       setUser({ 
@@ -222,7 +222,7 @@ export default function EmployeePayroll() {
     try {
       setLoading(true);
       setError('');
-      const token = localStorage.getItem('jwtToken');
+      const token = sessionStorage.getItem('jwtToken');
       const payload = parseJwt(token);
       const employeeId = payload.employeeId;
       
@@ -271,7 +271,7 @@ export default function EmployeePayroll() {
   // View payslip in new tab
   const handleView = async (payslip) => {
     try {
-      const token = localStorage.getItem('jwtToken');
+      const token = sessionStorage.getItem('jwtToken');
       const viewUrl = `http://localhost:8080/payflowapi/payroll/payslips/download/${payslip.employeeId}/${payslip.month.toLowerCase()}/${payslip.year}`;
       
       const newWindow = window.open('', '_blank');
@@ -307,7 +307,7 @@ export default function EmployeePayroll() {
   const handleDownload = async (payslip) => {
     try {
       setDownloading(true);
-      const token = localStorage.getItem('jwtToken');
+      const token = sessionStorage.getItem('jwtToken');
       
       const downloadUrl = `http://localhost:8080/payflowapi/payroll/payslips/download/${payslip.employeeId}/${payslip.month.toLowerCase()}/${payslip.year}`;
       
@@ -351,7 +351,7 @@ export default function EmployeePayroll() {
           title="My Payroll"
           user={user}
           onLogout={() => {
-            localStorage.removeItem('jwtToken');
+            sessionStorage.removeItem('jwtToken');
             navigate('/employee-login');
           }}
         />

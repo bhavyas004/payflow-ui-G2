@@ -2,6 +2,7 @@
 import React, { use, useState } from 'react';
 import DashboardLayout from '../components/DashboardLayout';
 import axios from 'axios';
+import { useNavigate } from 'react-router-dom';
 import '../styles/App.css';
 
 function PasswordReset() {
@@ -9,6 +10,7 @@ function PasswordReset() {
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [oldPassword, setOldPassword] = useState('');
+  const navigate = useNavigate();
 
   const handleReset = async (e) => {
     e.preventDefault();
@@ -17,7 +19,7 @@ function PasswordReset() {
       return;
     }
     try {
-      const token = localStorage.getItem('jwtToken');
+      const token = sessionStorage.getItem('jwtToken');
       await axios.post('/payflowapi/user/reset-password', {
         username: username,
         oldPassword: oldPassword,
@@ -27,11 +29,16 @@ function PasswordReset() {
           Authorization: `Bearer ${token}`
         }
       });
-      alert('Password reset successful!');
+      alert('Password reset successful! Redirecting to PayFlow-AI...');
       setUsername('');
       setOldPassword('');
       setNewPassword('');
       setConfirmPassword('');
+      
+      // Redirect to unified interface after successful password reset
+      setTimeout(() => {
+        navigate('/payflow-ai/dashboard');
+      }, 1500);
     } catch (error) {
       alert('Password reset failed: ' + (error.response?.data?.error || error.message));
     }

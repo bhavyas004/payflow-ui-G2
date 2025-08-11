@@ -5,7 +5,7 @@ const API_BASE = 'http://localhost:8080/payflowapi';
 
 // Get authentication headers
 const getAuthHeaders = () => {
-  const token = localStorage.getItem('jwtToken');
+  const token = sessionStorage.getItem('jwtToken');
   return {
     headers: {
       Authorization: token ? `Bearer ${token}` : '',

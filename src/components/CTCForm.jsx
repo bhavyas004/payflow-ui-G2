@@ -35,7 +35,7 @@ export default function CTCForm({ employee, onSave, onCancel }) {
     setLoading(true);
 
     try {
-      const token = localStorage.getItem('jwtToken');
+      const token = sessionStorage.getItem('jwtToken');
       const ctcData = {
         employeeId: employee.id,
         ...formData,

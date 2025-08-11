@@ -97,7 +97,7 @@ function CTCForm({ employee, onSave, onCancel }) {
 
     try {
       setCalculating(true);
-      const token = localStorage.getItem('jwtToken');
+      const token = sessionStorage.getItem('jwtToken');
       
       const response = await axios.post('/payflowapi/payroll/ctc/preview', {
         basicSalary: basicSalary,
@@ -156,7 +156,7 @@ function CTCForm({ employee, onSave, onCancel }) {
     setLoading(true);
 
     try {
-      const token = localStorage.getItem('jwtToken');
+      const token = sessionStorage.getItem('jwtToken');
       const ctcData = {
         employeeId: employee.id,
         basicSalary: parseFloat(formData.basicSalary) || 0,
@@ -433,7 +433,7 @@ export default function CTCManagement() {
   const [filteredEmployees, setFilteredEmployees] = useState([]);
 
   useEffect(() => {
-    const token = localStorage.getItem('jwtToken');
+    const token = sessionStorage.getItem('jwtToken');
     if (token) {
       const payload = parseJwt(token);
       setUser({ name: payload.sub || payload.username || 'HR User' });
@@ -458,15 +458,46 @@ export default function CTCManagement() {
 
   const fetchEmployees = async () => {
     try {
-      const token = localStorage.getItem('jwtToken');
-      console.log('Fetching employees...');
+      const token = sessionStorage.getItem('jwtToken');
+      console.log('Fetching employees with CTC data...');
       
-      const response = await axios.get('/payflowapi/onboard-employee/employees', {
+      // First get all employees
+      const employeesResponse = await axios.get('/payflowapi/onboard-employee/employees', {
         headers: { Authorization: `Bearer ${token}` }
       });
       
-      console.log('Employees response:', response.data);
-      setEmployees(response.data || []);
+      console.log('Employees response:', employeesResponse.data);
+      const employeesData = employeesResponse.data || [];
+      
+      // For each employee, fetch their current CTC
+      const employeesWithCTC = await Promise.all(
+        employeesData.map(async (employee) => {
+          try {
+            const ctcResponse = await axios.get(`/payflowapi/payroll/ctc/${employee.id}/current`, {
+              headers: { Authorization: `Bearer ${token}` }
+            });
+            
+            if (ctcResponse.data && ctcResponse.data.success) {
+              const currentCTC = ctcResponse.data.data;
+              return {
+                ...employee,
+                currentCTC: currentCTC?.totalCtc || 0,
+                lastUpdated: currentCTC?.effectiveFrom || null
+              };
+            }
+          } catch (error) {
+            console.warn(`No CTC data found for employee ${employee.id}`);
+          }
+          
+          return {
+            ...employee,
+            currentCTC: 0,
+            lastUpdated: null
+          };
+        })
+      );
+      
+      setEmployees(employeesWithCTC);
     } catch (error) {
       console.error('Error fetching employees:', error);
       setEmployees([]);
@@ -477,7 +508,7 @@ export default function CTCManagement() {
 
   const fetchCTCHistory = async (employeeId) => {
     try {
-      const token = localStorage.getItem('jwtToken');
+      const token = sessionStorage.getItem('jwtToken');
       console.log('Fetching CTC history for employee:', employeeId);
       
       // FIXED: Correct API endpoint with /payroll/
@@ -518,7 +549,7 @@ export default function CTCManagement() {
           title="CTC Management"
           user={user}
           onLogout={() => {
-            localStorage.removeItem('jwtToken');
+            sessionStorage.removeItem('jwtToken');
             navigate('/');
           }}
         />

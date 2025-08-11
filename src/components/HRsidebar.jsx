@@ -1,4 +1,5 @@
-// Update your existing HRSidebar component
+import React from 'react';
+import '../styles/App.css';
 
 function HRSidebar({ active }) {
   return (
@@ -30,3 +31,5 @@ function HRSidebar({ active }) {
     </aside>
   );
 }
+
+export default HRSidebar;
