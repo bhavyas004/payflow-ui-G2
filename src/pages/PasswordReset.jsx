@@ -1,6 +1,5 @@
 // src/pages/PasswordReset.jsx
-import React, { use, useState } from 'react';
-import DashboardLayout from '../components/DashboardLayout';
+import React, { useState } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import '../styles/App.css';
@@ -45,10 +44,10 @@ function PasswordReset() {
   };
 
   return (
-    <DashboardLayout role="User">
-      <div className="form-container">
+    <div className="container">
+      <div className="form-box">
         <h2>Reset Password</h2>
-        <form onSubmit={handleReset} className="form-dashboard">
+        <form onSubmit={handleReset}>
           <div className="input-field">
             <label>User Name</label>
             <input
@@ -92,7 +91,7 @@ function PasswordReset() {
           <button type="submit" className="button">Reset Password</button>
         </form>
       </div>
-    </DashboardLayout>
+    </div>
   );
 }
 
