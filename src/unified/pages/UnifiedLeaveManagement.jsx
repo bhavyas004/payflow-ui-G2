@@ -33,6 +33,7 @@ function UnifiedLeaveManagement() {
   });
   const [totalDays, setTotalDays] = useState(0);
   const [leaveBalance, setLeaveBalance] = useState({ remaining: 12, used: 0, total: 12 });
+  const [leaveBreakdown, setLeaveBreakdown] = useState({ paidDays: 0, unpaidDays: 0 });
   const [formLoading, setFormLoading] = useState(false);
   const [formError, setFormError] = useState('');
   const [formSuccess, setFormSuccess] = useState('');
@@ -169,32 +170,57 @@ function UnifiedLeaveManagement() {
     }
   }, [activeTab, user, role, leaveRequests.length, loading]);
 
-  // Calculate total days when dates change (following existing business logic)
+  // Calculate total days and fetch paid/unpaid breakdown from backend when dates change
   useEffect(() => {
-    if (leaveForm.startDate && leaveForm.endDate) {
-      const start = new Date(leaveForm.startDate);
-      const end = new Date(leaveForm.endDate);
-      const diffTime = end - start;
-      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1; // Include both start and end dates
-      setTotalDays(diffDays > 0 ? diffDays : 0);
-    } else {
-      setTotalDays(0);
-    }
-  }, [leaveForm.startDate, leaveForm.endDate]);
+    const fetchBreakdown = async () => {
+      if (leaveForm.startDate && leaveForm.endDate && user?.id) {
+        // Calculate total days (excluding weekends)
+        const start = new Date(leaveForm.startDate);
+        const end = new Date(leaveForm.endDate);
+        let count = 0;
+        let date = new Date(start);
+        while (date <= end) {
+          const day = date.getDay();
+          if (day !== 0 && day !== 6) {
+            count++;
+          }
+          date.setDate(date.getDate() + 1);
+        }
+        setTotalDays(count > 0 ? count : 0);
 
-  // Early return if user is not loaded yet - AFTER all hooks
-  if (!user) {
-    return (
-      <div className="unified-layout">
-        <div className="unified-content">
-          <div className="loading-state">
-            <h3>Loading user information...</h3>
-            <p>Please wait while we load your profile.</p>
-          </div>
-        </div>
-      </div>
-    );
-  }
+        // Fetch paid/unpaid breakdown from new backend endpoint
+        try {
+          const token = sessionStorage.getItem('jwtToken');
+          const headers = { Authorization: `Bearer ${token}` };
+          // Use employeeId from JWT
+          const payload = parseJwt(token);
+          const employeeId = payload.employeeId || user.id;
+          if (!employeeId) {
+            setLeaveBreakdown({ paidDays: 0, unpaidDays: 0 });
+            return;
+          }
+          // Call new breakdown endpoint
+          const breakdownEndpoint = `/payflowapi/leave-requests/balance/${employeeId}/breakdown?startDate=${leaveForm.startDate}&endDate=${leaveForm.endDate}`;
+          const response = await axios.get(breakdownEndpoint, { headers });
+          const breakdown = response.data && response.data.data;
+          if (breakdown && typeof breakdown.paidDays === 'number' && typeof breakdown.unpaidDays === 'number') {
+            setLeaveBreakdown({
+              paidDays: breakdown.paidDays,
+              unpaidDays: breakdown.unpaidDays
+            });
+          } else {
+            setLeaveBreakdown({ paidDays: 0, unpaidDays: 0 });
+          }
+        } catch (err) {
+          setLeaveBreakdown({ paidDays: 0, unpaidDays: 0 });
+        }
+      } else {
+        setTotalDays(0);
+        setLeaveBreakdown({ paidDays: 0, unpaidDays: 0 });
+      }
+    };
+    fetchBreakdown();
+  }, [leaveForm.startDate, leaveForm.endDate, user]);
 
   // Helper functions for formatting (following existing business logic)
   const formatDate = (dateString) => {
@@ -675,14 +701,12 @@ function UnifiedLeaveManagement() {
       setFormError('Please provide a reason for leave');
       return false;
     }
-    if (totalDays > leaveBalance.remaining) {
-      setFormError(`Insufficient leave balance. You have ${leaveBalance.remaining} days remaining.`);
-      return false;
-    }
     if (totalDays <= 0) {
       setFormError('Invalid date range');
       return false;
     }
+    // Do NOT block for insufficient leave balance; show warning in UI only
+    setFormError('');
     return true;
   };
 
@@ -709,29 +733,50 @@ function UnifiedLeaveManagement() {
         Authorization: `Bearer ${token}`,
         'Content-Type': 'application/json'
       };
-      
+
       // Parse JWT to get employeeId like existing code
       const payload = parseJwt(token);
       const employeeId = payload.employeeId;
-      
+
       // Use fetched employee details if available, otherwise fall back to JWT/user data
       const employeeName = employeeDetails?.fullName || payload.fullName || payload.sub || payload.username || 'Employee';
       const employeeEmail = employeeDetails?.email || payload.email || payload.sub || user.email || '';
-      
+
       if (!employeeId) {
         setFormError('Employee ID not found. Please login again.');
         return;
       }
-      
+
+      // Fetch current unpaid leaves from backend
+      let currentUnpaidLeaves = 0;
+      try {
+        const unpaidEndpoint = `/payflowapi/leave-requests/balance/${employeeId}`;
+        const unpaidResponse = await axios.get(unpaidEndpoint, { headers });
+        // Assume backend returns { unpaidLeaves: number } or similar
+        if (unpaidResponse.data && typeof unpaidResponse.data.unpaidLeaves === 'number') {
+          currentUnpaidLeaves = unpaidResponse.data.unpaidLeaves;
+        }
+      } catch (err) {
+        // If error, fallback to 0
+        currentUnpaidLeaves = 0;
+      }
+
+      // Add new unpaid days to existing count
+      const newUnpaidDays = leaveBreakdown.unpaidDays || 0;
+      const totalUnpaidLeaves = currentUnpaidLeaves + newUnpaidDays;
+
       console.log('📝 Submitting with employee data:', {
         employeeId,
         employeeName,
         employeeEmail,
         fromFetchedDetails: !!employeeDetails,
-        fetchedDetails: employeeDetails
+        fetchedDetails: employeeDetails,
+        currentUnpaidLeaves,
+        newUnpaidDays,
+        totalUnpaidLeaves
       });
-      
-      // Following exact existing leave request structure
+
+      // Following exact existing leave request structure, but add totalUnpaidLeaves if backend expects it
       const leaveRequest = {
         employeeId: employeeId,
         employeeName: employeeName,
@@ -740,52 +785,35 @@ function UnifiedLeaveManagement() {
         endDate: leaveForm.endDate,
         totalDays: totalDays,
         reason: leaveForm.reason,
-        leaveYear: new Date().getFullYear()
+        leaveYear: new Date().getFullYear(),
+        totalUnpaidLeaves // Add this field if backend expects accumulated unpaid leaves
       };
-      
+
       const response = await axios.post('/payflowapi/leave-requests/apply', leaveRequest, { headers });
-      
+
       if (response.data.success) {
         setFormSuccess('Leave request submitted successfully!');
         setLeaveForm({ startDate: '', endDate: '', reason: '' });
         setTotalDays(0);
-        
+
         // Refresh leave data to show updated stats
         fetchLeaveData();
       } else {
         setFormError(response.data.message || 'Failed to submit leave request');
       }
       setTotalDays(0);
-      
-      // Update leave balance immediately (optimistic update)
-      setLeaveBalance(prev => ({
-        ...prev,
-        remaining: prev.remaining - totalDays,
-        used: prev.used + totalDays
-      }));
-      
-      // Update stats immediately (optimistic update)
-      setLeaveStats(prev => ({
-        ...prev,
-        totalRequests: prev.totalRequests + 1,
-        pendingRequests: prev.pendingRequests + 1,
-        myUsedLeaves: prev.myUsedLeaves + totalDays,
-        myLeaveBalance: prev.myLeaveBalance - totalDays
-      }));
-      
-      // Refresh leave data after a short delay to ensure backend has processed
-      setTimeout(() => {
-        fetchLeaveData();
-      }, 1000);
+
+      // Always fetch leave data from backend after submission to ensure correct paid/unpaid breakdown
+      fetchLeaveData();
     } catch (error) {
       console.error('Error submitting leave request:', error);
-      
+
       let errorMessage = 'Failed to submit leave request';
-      
+
       if (error.response) {
         console.error('Server Error Status:', error.response.status);
         console.error('Server Error Data:', error.response.data);
-        
+
         if (error.response.data) {
           errorMessage = error.response.data.message || 
                         error.response.data.error || 
@@ -796,7 +824,7 @@ function UnifiedLeaveManagement() {
       } else {
         errorMessage = error.message || 'Request setup error';
       }
-      
+
       setFormError(errorMessage);
     } finally {
       setFormLoading(false);
@@ -845,7 +873,12 @@ function UnifiedLeaveManagement() {
         
         <div className="overview-stats">
           <PermissionWrapper requiredRoles={['EMPLOYEE']}>
-            <div className="employee-leave-stats">
+            <div className="employee-leave-stats" style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(5, 1fr)',
+              gap: '1.5rem',
+              marginBottom: '2rem'
+            }}>
               <div className="stat-card">
                 <div className="stat-icon">📅</div>
                 <div className="stat-content">
@@ -853,7 +886,6 @@ function UnifiedLeaveManagement() {
                   <p>Leave Balance</p>
                 </div>
               </div>
-              
               <div className="stat-card">
                 <div className="stat-icon">✅</div>
                 <div className="stat-content">
@@ -861,12 +893,25 @@ function UnifiedLeaveManagement() {
                   <p>Used Leaves</p>
                 </div>
               </div>
-              
               <div className="stat-card">
                 <div className="stat-icon">🔄</div>
                 <div className="stat-content">
                   <h4>{leaveStats.pendingRequests}</h4>
                   <p>Pending Requests</p>
+                </div>
+              </div>
+              <div className="stat-card">
+                <div className="stat-icon">💰</div>
+                <div className="stat-content">
+                  <h4>{leaveRequests.filter(req => req.status?.toLowerCase() === 'approved' && req.paidDays > 0).reduce((sum, req) => sum + (req.paidDays || 0), 0)}</h4>
+                  <p>Paid Leaves</p>
+                </div>
+              </div>
+              <div className="stat-card">
+                <div className="stat-icon">🚫💰</div>
+                <div className="stat-content">
+                  <h4>{leaveRequests.filter(req => req.status?.toLowerCase() === 'approved' && req.unpaidDays > 0).reduce((sum, req) => sum + (req.unpaidDays || 0), 0)}</h4>
+                  <p>Unpaid Leaves</p>
                 </div>
               </div>
             </div>
@@ -1017,6 +1062,31 @@ function UnifiedLeaveManagement() {
                   <div className="leave-detail-row">
                     <span className="detail-label">Duration:</span>
                     <span className="detail-value">{request.totalDays} days</span>
+                  </div>
+                  <div className="leave-detail-row">
+                    <span className="detail-label">Breakdown:</span>
+                    <span className="detail-value">
+                      {request.paidDays > 0 && request.unpaidDays > 0 && (
+                        <span style={{ color: 'orange' }}>
+                          {request.paidDays} paid, {request.unpaidDays} unpaid
+                        </span>
+                      )}
+                      {request.paidDays === 0 && request.unpaidDays > 0 && (
+                        <span style={{ color: 'orange' }}>
+                          All unpaid
+                        </span>
+                      )}
+                      {request.paidDays > 0 && request.unpaidDays === 0 && (
+                        <span style={{ color: 'green' }}>
+                          All paid
+                        </span>
+                      )}
+                      {(request.paidDays === undefined && request.unpaidDays === undefined) && (
+                        <span style={{ color: 'gray' }}>
+                          Not available
+                        </span>
+                      )}
+                    </span>
                   </div>
 
                   <div className="leave-detail-row">
@@ -1174,92 +1244,86 @@ function UnifiedLeaveManagement() {
         ) : (
           <div className="leave-requests-grid">
             {filteredRequests.map(request => (
-              <div key={request.id} className="leave-request-card">
-                <div className="leave-card-header">
-                  <div className="leave-id">Leave ID: #{request.id}</div>
-                  <span className={`status-badge ${getStatusBadgeClass(request.status)}`}>
-                    {request.status}
-                  </span>
-                </div>
-
-                <div className="leave-card-body">
-                  <div className="leave-detail-row">
-                    <span className="detail-label">Applied Date:</span>
-                    <span className="detail-value">{formatDate(request.createdAt)}</span>
-                  </div>
-
-                  <div className="leave-detail-row">
-                    <span className="detail-label">Leave Period:</span>
-                    <span className="detail-value">
-                      {formatDate(request.startDate)} - {formatDate(request.endDate)}
+              <React.Fragment key={request.id}>
+                <div className="leave-request-card">
+                  <div className="leave-card-header">
+                    <div className="leave-id">Leave ID: #{request.id}</div>
+                    <span className={`status-badge ${getStatusBadgeClass(request.status)}`}>
+                      {request.status}
                     </span>
                   </div>
-
-                  <div className="leave-detail-row">
-                    <span className="detail-label">Duration:</span>
-                    <span className="detail-value">{request.totalDays} days</span>
-                  </div>
-
-                  <div className="leave-detail-row">
-                    <span className="detail-label">Reason:</span>
-                    <span className="detail-value">
-                      {request.reason || 'No reason provided'}
-                    </span>
-                  </div>
-
-                  {request.approvedBy && (
+                  <div className="leave-card-body">
                     <div className="leave-detail-row">
-                      <span className="detail-label">Approved By:</span>
-                      <span className="detail-value">{request.approvedBy}</span>
+                      <span className="detail-label">Applied Date:</span>
+                      <span className="detail-value">{formatDate(request.createdAt)}</span>
                     </div>
-                  )}
-
-                  {request.rejectedBy && (
                     <div className="leave-detail-row">
-                      <span className="detail-label">Rejected By:</span>
-                      <span className="detail-value">{request.rejectedBy}</span>
+                      <span className="detail-label">Leave Period:</span>
+                      <span className="detail-value">
+                        {formatDate(request.startDate)} - {formatDate(request.endDate)}
+                      </span>
                     </div>
-                  )}
-
-                  {request.comments && (
                     <div className="leave-detail-row">
-                      <span className="detail-label">Comments:</span>
-                      <span className="detail-value">{request.comments}</span>
+                      <span className="detail-label">Duration:</span>
+                      <span className="detail-value">{request.totalDays} days</span>
+                    </div>
+                    <div className="leave-detail-row">
+                      <span className="detail-label">Reason:</span>
+                      <span className="detail-value">
+                        {request.reason || 'No reason provided'}
+                      </span>
+                    </div>
+                    {request.approvedBy && (
+                      <div className="leave-detail-row">
+                        <span className="detail-label">Approved By:</span>
+                        <span className="detail-value">{request.approvedBy}</span>
+                      </div>
+                    )}
+                    {request.rejectedBy && (
+                      <div className="leave-detail-row">
+                        <span className="detail-label">Rejected By:</span>
+                        <span className="detail-value">{request.rejectedBy}</span>
+                      </div>
+                    )}
+                    {request.comments && (
+                      <div className="leave-detail-row">
+                        <span className="detail-label">Comments:</span>
+                        <span className="detail-value">{request.comments}</span>
+                      </div>
+                    )}
+                  </div>
+                  {/* Show cancel/delete options for pending requests */}
+                  {request.status?.toLowerCase() === 'pending' && (
+                    <div className="request-actions">
+                      <div className="action-buttons-row">
+                        <button 
+                          className="btn btn-sm btn-warning"
+                          onClick={() => {
+                            if (window.confirm('Are you sure you want to cancel this leave request? This will change the status to CANCELLED but keep the record.')) {
+                              handleCancelLeave(request.id);
+                            }
+                          }}
+                        >
+                          🚫 Cancel Request
+                        </button>
+                        <button 
+                          className="btn btn-sm btn-danger"
+                          onClick={() => {
+                            if (window.confirm('Are you sure you want to delete this leave request? This will permanently remove the request and cannot be undone.')) {
+                              handleDeleteLeave(request.id);
+                            }
+                          }}
+                        >
+                          �️ Delete Request
+                        </button>
+                      </div>
+                      <div className="action-note">
+                        <small>💡 Cancel: Marks as cancelled | Delete: Permanently removes</small>
+                      </div>
                     </div>
                   )}
                 </div>
-                
-                {/* Show cancel/delete options for pending requests */}
-                {request.status?.toLowerCase() === 'pending' && (
-                  <div className="request-actions">
-                    <div className="action-buttons-row">
-                      <button 
-                        className="btn btn-sm btn-warning"
-                        onClick={() => {
-                          if (window.confirm('Are you sure you want to cancel this leave request? This will change the status to CANCELLED but keep the record.')) {
-                            handleCancelLeave(request.id);
-                          }
-                        }}
-                      >
-                        🚫 Cancel Request
-                      </button>
-                      <button 
-                        className="btn btn-sm btn-danger"
-                        onClick={() => {
-                          if (window.confirm('Are you sure you want to delete this leave request? This will permanently remove the request and cannot be undone.')) {
-                            handleDeleteLeave(request.id);
-                          }
-                        }}
-                      >
-                        �️ Delete Request
-                      </button>
-                    </div>
-                    <div className="action-note">
-                      <small>💡 Cancel: Marks as cancelled | Delete: Permanently removes</small>
-                    </div>
-                  </div>
-                )}
-              </div>
+              </React.Fragment>
             ))}
           </div>
         )}
@@ -1368,9 +1432,17 @@ function UnifiedLeaveManagement() {
             <div className="total-days-info">
               <strong>Total Days: {totalDays}</strong>
               {totalDays > leaveBalance.remaining && (
-                <span className="insufficient-balance">
+                <span className="insufficient-balance" style={{ color: 'red', marginLeft: '10px' }}>
                   ⚠️ Insufficient leave balance
                 </span>
+              )}
+              {/* Always show paid/unpaid breakdown if totalDays > 0 */}
+              <span style={{ marginLeft: '10px', fontWeight: 'bold', color: leaveBreakdown.unpaidDays > 0 ? (leaveBreakdown.paidDays > 0 ? 'orange' : 'red') : 'green' }}>
+                Paid: {leaveBreakdown.paidDays}, Unpaid: {leaveBreakdown.unpaidDays}
+              </span>
+              {/* Show 'Breakdown not available' only if both are zero */}
+              {leaveBreakdown.paidDays === 0 && leaveBreakdown.unpaidDays === 0 && (
+                <span style={{ color: 'gray', marginLeft: '10px' }}>Breakdown not available</span>
               )}
             </div>
           )}
@@ -1389,6 +1461,16 @@ function UnifiedLeaveManagement() {
           </div>
           
           <div className="form-actions">
+            {/* Debug info for submit button disabled state */}
+            {/* {formLoading && (
+              <div style={{ color: 'red', marginBottom: '8px' }}>Form is loading...</div>
+            )}
+            {totalDays === 0 && (
+              <div style={{ color: 'red', marginBottom: '8px' }}>Select valid start and end dates.</div>
+            )}
+            {!leaveForm.reason && (
+              <div style={{ color: 'red', marginBottom: '8px' }}>Reason for leave is required.</div>
+            )} */}
             <button
               type="button"
               className="btn btn-secondary"
@@ -1403,7 +1485,7 @@ function UnifiedLeaveManagement() {
             <button
               type="submit"
               className="btn btn-primary"
-              disabled={formLoading || totalDays > leaveBalance.remaining}
+              disabled={formLoading || totalDays === 0 || !leaveForm.reason}
             >
               {formLoading ? '⏳ Submitting...' : '📝 Submit Leave Request'}
             </button>
@@ -1433,7 +1515,16 @@ function UnifiedLeaveManagement() {
     }
   };
 
-  // Double check - ensure user is still loaded before rendering main content
+  // Clear form messages when switching tabs
+  useEffect(() => {
+    setFormError('');
+    setFormSuccess('');
+  }, [activeTab]);
+
+  const availableTabs = getAvailableTabs();
+
+  // Always call hooks before any return
+  // Early return for loading user/role
   if (!user || !role) {
     return (
       <div className="unified-layout">
@@ -1446,8 +1537,6 @@ function UnifiedLeaveManagement() {
       </div>
     );
   }
-
-  const availableTabs = getAvailableTabs();
 
   return (
     <Layout

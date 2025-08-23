@@ -1200,6 +1200,14 @@ function UnifiedPayrollManagement() {
                       <span>Generated:</span>
                       <span>{new Date(payslip.generatedOn).toLocaleDateString()}</span>
                     </div>
+                    <div className="detail-row">
+                      <span>Unpaid Leaves:</span>
+                      <span className="deduction">{payslip.unpaidLeaves || 0}</span>
+                    </div>
+                    <div className="detail-row">
+                      <span>Unpaid Leave Deduction:</span>
+                      <span className="deduction">₹{Number(payslip.unpaidLeaveDeduction || 0).toLocaleString()}</span>
+                    </div>
                   </div>
                   <div className="payslip-actions">
                     <button 

@@ -176,10 +176,11 @@ function UnifiedDashboard() {
 
         {/* Summary Cards */}
         <div style={{ 
-          display: 'grid', 
-          gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', 
+          display: 'flex',
           gap: '1.5rem',
-          marginBottom: '2rem'
+          marginBottom: '2rem',
+          flexWrap: 'nowrap',
+          justifyContent: 'flex-start'
         }}>
           {canAccess(['ADMIN', 'HR']) && (
             <UnifiedSummaryCard
@@ -255,22 +256,24 @@ function UnifiedDashboard() {
                 </button>
               </>
             )}
-            <button 
-              onClick={() => navigate('/payflow-ai/leaves')}
-              style={{
-                background: '#8b5cf6',
-                color: 'white',
-                border: 'none',
-                borderRadius: '0.375rem',
-                padding: '0.75rem 1.5rem',
-                fontSize: '0.875rem',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.5rem'
-              }}>
-              📋 {role === 'EMPLOYEE' ? 'My Leave Requests' : 'View Leave Requests'}
-            </button>
+            {(role === 'EMPLOYEE' || role === 'MANAGER') && (
+              <button 
+                onClick={() => navigate('/payflow-ai/leaves')}
+                style={{
+                  background: '#8b5cf6',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '0.375rem',
+                  padding: '0.75rem 1.5rem',
+                  fontSize: '0.875rem',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem'
+                }}>
+                📋 {role === 'EMPLOYEE' ? 'My Leave Requests' : 'View Leave Requests'}
+              </button>
+            )}
           </div>
         </div>
       </div>
