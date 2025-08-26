@@ -90,7 +90,7 @@ function UnifiedTopbar({ title, subtitle, showClock = true, showProfile = true, 
   };
 
   return (
-    <div className={`topbar unified-topbar ${className}`}>
+    <div className={`topbar payflow-topbar ${className}`}>
       {/* Left Section - Title and Subtitle */}
       <div className="topbar-left">
         {title && (

@@ -1,15 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { useAuth } from '../../shared/hooks/useAuth';
-import Layout from '../../shared/components/Layout';
-import PermissionWrapper from '../../shared/components/PermissionWrapper';
+import { useAuth } from '../shared/hooks/useAuth';
+import Layout from '../shared/components/Layout';
+import PermissionWrapper from '../shared/components/PermissionWrapper';
 import axios from 'axios';
-import '../../shared/styles/unified.css';
+import '../shared/styles/unified.css';
 
 /**
  * Unified Leave Management Component
  * Role-based leave interface with permission-controlled features
  */
-function UnifiedLeaveManagement() {
+function LeaveManagement() {
   const { user, role, getToken, checkRole } = useAuth();
   
   // Helper function to check if user can access certain roles
@@ -1527,8 +1527,8 @@ function UnifiedLeaveManagement() {
   // Early return for loading user/role
   if (!user || !role) {
     return (
-      <div className="unified-layout">
-        <div className="unified-content">
+      <div className="payflow-layout">
+        <div className="payflow-content">
           <div className="loading-state">
             <h3>Loading user information...</h3>
             <p>Please wait while we load your profile and permissions.</p>
@@ -1545,7 +1545,7 @@ function UnifiedLeaveManagement() {
       sidebarActive="leaves"
       requiredRoles={['ADMIN', 'HR', 'MANAGER', 'EMPLOYEE']}
     >
-      <div className="unified-leave-management">
+      <div className="payflow-leave-management">
         {/* Tab Navigation */}
         <div className="tab-navigation">
           {availableTabs.map(tab => (
@@ -1569,4 +1569,4 @@ function UnifiedLeaveManagement() {
   );
 }
 
-export default UnifiedLeaveManagement;
+export default LeaveManagement;

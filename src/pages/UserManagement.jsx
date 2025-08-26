@@ -1,23 +1,23 @@
 import React, { useState, useEffect } from 'react';
-import { useAuth } from '../../shared/hooks/useAuth';
-import Layout from '../../shared/components/Layout';
-import PermissionWrapper from '../../shared/components/PermissionWrapper';
+import { useAuth } from '../shared/hooks/useAuth';
+import Layout from '../shared/components/Layout';
+import PermissionWrapper from '../shared/components/PermissionWrapper';
 import axios from 'axios';
-import '../../shared/styles/unified.css';
+import '../shared/styles/unified.css';
 import { 
   validateUsername, 
   validateEmail, 
   validatePassword, 
   validateContactNumber,
   validateForm 
-} from '../utils/validationUtils';
+} from '../shared/utils/validationUtils';
 
 /**
  * Unified User Management Component
  * Manages system users (HR, Admin, Manager) with login credentials and roles
  * Different from employees - these are users who can access the system
  */
-function UnifiedUserManagement() {
+function UserManagement() {
   const { user, role, getToken, checkRole } = useAuth();
   
   // Helper function to check if user can access certain roles
@@ -594,7 +594,7 @@ function UnifiedUserManagement() {
       sidebarActive="users"
       requiredRoles={['ADMIN']}
     >
-      <div className="unified-user-management">
+      <div className="payflow-user-management">
         {/* Tab Navigation */}
         <div className="tab-navigation">
           {availableTabs.map(tab => (
@@ -618,4 +618,4 @@ function UnifiedUserManagement() {
   );
 }
 
-export default UnifiedUserManagement;
+export default UserManagement;

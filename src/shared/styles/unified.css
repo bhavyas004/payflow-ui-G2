@@ -4,7 +4,7 @@
    ========================================================================== */
 
 /* Layout and Structure */
-.unified-layout {
+.payflow-layout {
   display: flex;
   min-height: 100vh;
   background: var(--bg-primary, #f8fafc);
@@ -58,7 +58,7 @@
 }
 
 /* Unified Topbar */
-.unified-topbar {
+.payflow-topbar {
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -765,7 +765,7 @@
 
 /* Responsive Design */
 @media (max-width: 768px) {
-  .unified-layout {
+  .payflow-layout {
     flex-direction: column;
   }
   

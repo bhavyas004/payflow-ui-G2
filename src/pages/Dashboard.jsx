@@ -1,15 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../../shared/hooks/useAuth';
-import Layout from '../../shared/components/Layout';
+import { useAuth } from '../shared/hooks/useAuth';
+import Layout from '../shared/components/Layout';
 import axios from 'axios';
-import '../../shared/styles/unified.css';
+import '../shared/styles/unified.css';
 
 /**
  * Unified Dashboard Component
  * Simplified, self-contained dashboard without dependencies on old UI components
  */
-function UnifiedDashboard() {
+function Dashboard() {
   const { user, role, getToken, checkRole } = useAuth();
   const navigate = useNavigate();
   
@@ -281,4 +281,4 @@ function UnifiedDashboard() {
   );
 }
 
-export default UnifiedDashboard;
+export default Dashboard;

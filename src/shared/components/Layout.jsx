@@ -54,7 +54,7 @@ function Layout({
 
   // Wrap with permission checking if required
   const content = (
-    <div className={`dashboard-layout unified-layout ${className}`}>
+    <div className={`dashboard-layout payflow-layout ${className}`}>
       {showSidebar && (
         <RoleBasedSidebar active={sidebarActive} />
       )}

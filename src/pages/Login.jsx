@@ -41,9 +41,9 @@ export default function Login() {
       sessionStorage.setItem('jwtToken', token);
       const payload = parseJwt(token);
       const role = payload.role?.toLowerCase();
-      const firstLogin = payload.isFirstLogin;
-      
-      if (firstLogin === true) {
+      const resetpassword = payload.resetPasswordRequired;
+
+      if (resetpassword === true) {
         navigate('/reset-password', { state: { email: res.data.email || email } });
       } else {
         // Redirect to unified PayFlow-AI interface for all authenticated users

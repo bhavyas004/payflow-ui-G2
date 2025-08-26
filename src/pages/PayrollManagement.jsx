@@ -1,15 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { useAuth } from '../../shared/hooks/useAuth';
-import Layout from '../../shared/components/Layout';
-import PermissionWrapper from '../../shared/components/PermissionWrapper';
+import { useAuth } from '../shared/hooks/useAuth';
+import Layout from '../shared/components/Layout';
+import PermissionWrapper from '../shared/components/PermissionWrapper';
 import axios from 'axios';
-import '../../shared/styles/unified.css';
+import '../shared/styles/unified.css';
 
 /**
  * Unified Payroll Management Component
  * Role-based payroll interface with permission-controlled features
  */
-function UnifiedPayrollManagement() {
+function PayrollManagement() {
   const { user, role, getToken, checkRole, checkPermission } = useAuth();
   
   // Helper function to check if user can access certain roles or permissions
@@ -144,7 +144,7 @@ function UnifiedPayrollManagement() {
 
   useEffect(() => {
     // Debug information
-    console.log('UnifiedPayrollManagement mounted');
+    console.log('PayrollManagement mounted');
     console.log('User:', user);
     console.log('Role:', role);
     console.log('Token from sessionStorage:', sessionStorage.getItem('jwtToken'));
@@ -1794,7 +1794,7 @@ function UnifiedPayrollManagement() {
       sidebarActive="payroll"
       requiredRoles={['ADMIN', 'HR', 'MANAGER', 'EMPLOYEE']}
     >
-      <div className="unified-payroll-management">
+      <div className="payflow-payroll-management">
         {/* Tab Navigation */}
         <div className="tab-navigation">
           {availableTabs.map(tab => (
@@ -2187,4 +2187,4 @@ function UnifiedPayrollManagement() {
   );
 }
 
-export default UnifiedPayrollManagement;
+export default PayrollManagement;

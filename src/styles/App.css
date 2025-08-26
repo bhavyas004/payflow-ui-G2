@@ -380,7 +380,7 @@ a:hover {
 
 /* Basic Layout Fallbacks */
 .dashboard-layout,
-.unified-layout {
+.payflow-layout {
   display: flex;
   min-height: 100vh;
 }
@@ -438,7 +438,7 @@ a:hover {
 /* Essential Unified Component Styles */
 /* Topbar Styles */
 .topbar,
-.unified-topbar {
+.payflow-topbar {
   display: flex;
   justify-content: space-between;
   align-items: center;

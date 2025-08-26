@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
-import { useAuth } from '../../shared/hooks/useAuth';
-import Layout from '../../shared/components/Layout';
-import PermissionWrapper from '../../shared/components/PermissionWrapper';
+import { useAuth } from '../shared/hooks/useAuth';
+import Layout from '../shared/components/Layout';
+import PermissionWrapper from '../shared/components/PermissionWrapper';
 import axios from 'axios';
-import '../../shared/styles/unified.css';
+import '../shared/styles/unified.css';
 import { 
   validateFullName, 
   validateEmail, 
@@ -12,13 +12,13 @@ import {
   validateAge,
   validateForm,
   validateAllExperiences
-} from '../utils/validationUtils';
+} from '../shared/utils/validationUtils';
 
 /**
  * Unified Employee Management Component
  * Role-based employee interface with permission-controlled features
  */
-function UnifiedEmployeeManagement() {
+function EmployeeManagement() {
   const { user, role, getToken, checkRole } = useAuth();
   const location = useLocation();
   
@@ -912,7 +912,7 @@ function UnifiedEmployeeManagement() {
       sidebarActive="employees"
       requiredRoles={['ADMIN', 'HR', 'MANAGER']}
     >
-      <div className="unified-employee-management">
+      <div className="payflow-employee-management">
         {/* Tab Navigation */}
         <div className="tab-navigation">
           {availableTabs.map(tab => (
@@ -936,4 +936,4 @@ function UnifiedEmployeeManagement() {
   );
 }
 
-export default UnifiedEmployeeManagement;
+export default EmployeeManagement;
